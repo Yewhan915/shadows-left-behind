@@ -1,3 +1,21 @@
+# Shadows Left Behind (余影)
+
+**▶ Play now (no install, no login): https://yewhan915.github.io/shadows-left-behind/**
+**🎬 30-second demo: https://youtu.be/J47VzL4Vcwo**
+
+A camera-AR shadow-puppet story about NASA's Opportunity rover, inspired by Wayang Kulit (Malaysian shadow puppetry). NASA Space Apps Challenge 2026 – "Abandoned but not Forgotten". Team cina · Sibu, Malaysia.
+
+**How to play (about 1 minute)**
+1. Open the link above in Chrome or Edge on a computer with a webcam.
+2. Tap **Oppy's book** to open the story.
+3. Click **Allow** when the browser asks for the camera (or just use the mouse – it works without a camera).
+4. Follow the on-screen hints: wave to wake Oppy, pinch thumb and index finger on rocks to scan them, pinch a memory and carry it to Earth.
+
+Hand tracking runs on your device with Google MediaPipe; the camera is never recorded or uploaded.
+AI disclosure: narration is AI text-to-speech (Microsoft neural TTS); an AI coding assistant helped write the code. Space images are real NASA images (NASA/JPL/Cornell).
+
+---
+
 # 余影 · Shadows Left Behind
 
 相机手势驱动的 Opportunity 互动数字皮影戏原型。
