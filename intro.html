@@ -1,0 +1,807 @@
+<!doctype html>
+<!--
+  Shadows Left Behind · Project intro deck
+  ----------------------------------------
+  Open by double-clicking (no server needed). Lives next to index.html so it can use
+  ./assets/nasa/*.jpg and ./audio/oppy/*.mp3.
+
+  Keys:  ← / →  previous / next part      1–8  jump to a part
+         H  recording mode (hides the nav + hints, keeps the content clean for screen capture)
+         F  fullscreen      M  sound on/off
+  URL:   intro.html#5 opens Part 5 directly (handy for recording one part at a time).
+
+  To add a part: copy any <section class="part" data-title="..."> block and put it where you
+  want it. The bottom nav, numbering and keyboard shortcuts are built from the sections
+  automatically. Give a canvas data-draw="name" and add a function to DRAW to animate it.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shadows Left Behind · Intro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#151e1c;--bg2:#1b2624;--line:#ffffff1a;--ink:#ede7db;--muted:#9c9d92;--soft:#b4b9af;
+  --gold:#ddbc79;--gold-d:#b98b4d;--paper:#e9cf98;--shadow:#35291f;--water:#8fd0e0;
+  --serif:"Noto Serif",Georgia,"Times New Roman",serif;--sans:Arial,"Helvetica Neue",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.65 var(--sans);overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;background:transparent;border:1px solid #65706566;border-radius:3px;padding:9px 16px}
+button:hover{border-color:var(--gold);background:#ddbc7912}
+button.primary{background:var(--gold);color:#1d1a14;border-color:var(--gold);font-weight:600}
+button.primary:hover{background:#e8cb8d}
+a{color:var(--gold)}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+
+/* ---------- chrome ---------- */
+.top{position:fixed;inset:0 0 auto 0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 4%;z-index:20;border-bottom:1px solid var(--line);background:linear-gradient(#151e1cf2,#151e1cd0);backdrop-filter:blur(6px)}
+.brand{font-family:var(--serif);font-size:19px;letter-spacing:.5px}
+.brand small{font:10px var(--sans);letter-spacing:2.5px;color:var(--muted);margin-left:14px}
+.counter{font-size:11px;letter-spacing:2.5px;color:var(--muted)}
+nav{position:fixed;inset:auto 0 0 0;height:60px;display:flex;align-items:center;gap:14px;padding:0 4%;z-index:20;border-top:1px solid var(--line);background:linear-gradient(#151e1cd0,#151e1cf2);backdrop-filter:blur(6px)}
+nav .pills{display:flex;gap:4px;flex:1;overflow-x:auto;scrollbar-width:none}
+nav .pills::-webkit-scrollbar{display:none}
+nav .pills button{border:0;padding:7px 10px;font-size:12px;color:var(--muted);white-space:nowrap}
+nav .pills button b{font-weight:400;color:#6f7468;margin-right:6px}
+nav .pills button.on{color:var(--ink);box-shadow:inset 0 -2px var(--gold);border-radius:0}
+nav .pills button.on b{color:var(--gold)}
+nav .tools{display:flex;gap:6px}
+nav .tools button{padding:7px 11px;font-size:12px}
+body.rec .top,body.rec nav,body.rec .hint{opacity:0;pointer-events:none}
+.top,nav,.hint{transition:opacity .4s}
+.toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#000c;border:1px solid var(--line);padding:8px 16px;border-radius:3px;font-size:12px;z-index:30;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* ---------- parts ---------- */
+#deck{position:fixed;inset:0}
+.part{position:absolute;inset:0;padding:84px 6% 84px;opacity:0;visibility:hidden;transform:translateY(14px);transition:opacity .7s ease,transform .7s ease,visibility 0s .7s;overflow-y:auto}
+.part.on{opacity:1;visibility:visible;transform:none;transition:opacity .7s ease,transform .7s ease}
+body.rec .part{padding-top:44px;padding-bottom:44px}
+.inner{max-width:1280px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;justify-content:center;gap:28px}
+.tag{font-size:11px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin:0}
+.tag span{color:var(--muted)}
+h1,h2,h3{font-family:var(--serif);font-weight:400;margin:0;line-height:1.25}
+h2{font-size:clamp(28px,3.4vw,48px)}
+h2 em{font-style:normal;color:var(--gold)}
+.lead{color:var(--soft);font-size:clamp(15px,1.25vw,18px);max-width:640px;margin:0}
+.hint{font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase}
+.frame{position:relative;border:1px solid #ffffff22;border-radius:8px;overflow:hidden;background:#0f1514;box-shadow:0 30px 80px #0007}
+.split{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:48px;align-items:center}
+.reveal>*{opacity:0;transform:translateY(16px);transition:opacity .8s,transform .8s}
+.part.on .reveal>*{opacity:1;transform:none}
+.part.on .reveal>*:nth-child(2){transition-delay:.12s}.part.on .reveal>*:nth-child(3){transition-delay:.24s}
+.part.on .reveal>*:nth-child(4){transition-delay:.36s}.part.on .reveal>*:nth-child(5){transition-delay:.48s}
+
+/* Part 1 · title */
+#p-title{padding:0}
+#p-title canvas{position:absolute;inset:0}
+#p-title .over{position:absolute;inset:0;padding:110px 7% 110px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none;background:linear-gradient(90deg,#151e1cdd 0%,#151e1c66 38%,#151e1c00 60%)}
+#p-title h1{font-size:clamp(38px,5.6vw,84px);line-height:1.12}
+#p-title h1 em{display:block;color:var(--gold);font-style:italic}
+#p-title .sub{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap}
+#p-title .meta{font-size:11px;letter-spacing:3px;color:#f4e9d2cc;text-transform:uppercase;text-shadow:0 1px 8px #0008}
+body.rec #p-title .over{padding-top:60px;padding-bottom:60px}
+
+/* Part 2 · concept */
+.pillars{display:grid;gap:14px;margin:0;padding:0;list-style:none}
+.pillars li{display:grid;grid-template-columns:44px 1fr;gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+.pillars b{font-family:var(--serif);font-size:22px;color:var(--gold);font-weight:400}
+.pillars strong{display:block;font-weight:600}
+.pillars span{color:var(--soft);font-size:14px}
+#lamp-frame{aspect-ratio:4/3}
+.readout{position:absolute;left:16px;bottom:14px;right:16px;display:flex;justify-content:space-between;font-size:11px;letter-spacing:2px;color:#f6e7c9;text-transform:uppercase;text-shadow:0 1px 6px #000;pointer-events:none}
+
+/* Part 3 · real story */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stat{padding:18px 18px 18px 0}
+.stat+.stat{padding-left:22px;border-left:1px solid var(--line)}
+.stat b{display:block;font-family:var(--serif);font-weight:400;font-size:clamp(30px,3.6vw,52px);color:var(--gold);line-height:1.1}
+.stat span{font-size:12px;color:var(--muted);letter-spacing:1px}
+.bars{display:grid;gap:8px;font-size:12px;color:var(--muted)}
+.bar{display:grid;grid-template-columns:110px 1fr;align-items:center;gap:12px}
+.bar i{display:block;height:10px;background:#ffffff10;border-radius:2px;overflow:hidden}
+.bar i::after{content:"";display:block;height:100%;width:var(--w);background:var(--gold);transform-origin:left;transform:scaleX(0);transition:transform 2.2s cubic-bezier(.2,.7,.2,1) .4s}
+.bar.plan i::after{background:#e9cf98;min-width:3px}
+.part.on .bar i::after{transform:scaleX(1)}
+.timeline{display:grid;grid-template-columns:repeat(6,1fr);position:relative;margin-top:6px}
+.timeline::before{content:"";position:absolute;left:0;right:0;top:11px;height:1px;background:#ffffff30}
+.timeline button{border:0;padding:0 8px 0 0;text-align:left;background:none;position:relative}
+.timeline button::before{content:"";display:block;width:11px;height:11px;border-radius:50%;background:var(--bg);border:2px solid #8a8c80;margin:5px 0 12px;transition:.3s}
+.timeline button.on::before{background:var(--gold);border-color:var(--gold);box-shadow:0 0 0 6px #ddbc7926}
+.timeline button small{display:block;font-size:11px;letter-spacing:1.5px;color:var(--muted)}
+.timeline button span{display:block;font-family:var(--serif);font-size:15px;line-height:1.35}
+.timeline button.on span{color:var(--gold)}
+.moment{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:28px;align-items:center;min-height:250px}
+.moment .pic{position:relative;height:250px;border-radius:6px;overflow:hidden;background:#0d1211;border:1px solid var(--line);display:grid;place-items:center}
+.moment .pic img{width:100%;height:100%;object-fit:cover;filter:sepia(.25) contrast(1.05);animation:fade .6s}
+.moment .pic .big{font-family:var(--serif);font-size:clamp(40px,5vw,72px);color:var(--gold);animation:fade .6s;text-align:center;line-height:1.1}
+.moment .pic .big small{display:block;font:12px var(--sans);letter-spacing:3px;color:var(--muted);margin-top:10px}
+.moment h3{font-size:clamp(20px,2vw,28px);margin-bottom:10px}
+.moment p{color:var(--soft);margin:0 0 12px}
+.credit{font-size:11px;color:var(--muted);letter-spacing:.5px}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* Part 4 · chapters */
+.chapters{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.chapter{position:relative;border:1px solid #ffffff1f;border-radius:6px;padding:18px 16px 16px;min-height:300px;display:flex;flex-direction:column;gap:10px;text-align:left;overflow:hidden;color:#2a2018;transition:transform .3s,box-shadow .3s}
+.chapter:hover,.chapter.on{transform:translateY(-4px);box-shadow:0 18px 40px #0008;border-color:transparent}
+.chapter .no{font-size:11px;letter-spacing:2.5px;opacity:.7}
+.chapter h3{font-size:22px}
+.chapter .g{font-size:30px;line-height:1}
+.chapter p{margin:0;font-size:13px;line-height:1.55}
+.chapter .play{margin-top:auto;font-size:12px;letter-spacing:1px;font-weight:600;display:flex;align-items:center;gap:8px}
+.chapter .play::before{content:"";width:0;height:0;border-left:8px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent}
+.chapter.playing .play::before{width:8px;height:10px;border:0;border-left:3px solid currentColor;border-right:3px solid currentColor}
+.chapter::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:#2a2018;transform:scaleX(0);transform-origin:left}
+.chapter.playing::after{animation:playbar var(--dur,6s) linear forwards}
+@keyframes playbar{to{transform:scaleX(1)}}
+.quote{min-height:64px;font-family:var(--serif);font-size:clamp(17px,1.6vw,23px);color:var(--ink);border-left:2px solid var(--gold);padding:4px 0 4px 18px;font-style:italic}
+.quote small{display:block;font:11px var(--sans);letter-spacing:2px;color:var(--muted);font-style:normal;margin-top:6px;text-transform:uppercase}
+
+/* Part 5 · demo */
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tabs button{font-size:13px}
+.tabs button.on{border-color:var(--gold);color:var(--gold);background:#ddbc7914}
+#demo-frame{aspect-ratio:21/9;max-height:56vh;cursor:grab}
+#demo-frame:active{cursor:grabbing}
+.demo-ui{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:16px 18px}
+.demo-ui .row{display:flex;justify-content:space-between;align-items:start;gap:10px}
+.chip{background:#2a2018d9;color:#f5e6c8;font-size:12px;letter-spacing:1px;padding:6px 11px;border-radius:3px}
+.chip.cam{background:#ffffffd9;color:#2a2018}
+.subtitle{align-self:center;background:#2a2018e6;color:#f8ecd4;font-family:var(--serif);font-size:clamp(14px,1.5vw,20px);padding:8px 18px;border-radius:3px;max-width:86%;text-align:center;opacity:0;transform:translateY(8px);transition:.5s}
+.subtitle.show{opacity:1;transform:none}
+.demo-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+
+/* Part 6 · how */
+.pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:0;counter-reset:s}
+.pipe button{border:0;border-top:1px solid #ffffff30;border-radius:0;padding:16px 14px 6px 0;text-align:left;position:relative}
+.pipe button::before{counter-increment:s;content:"0" counter(s);display:block;font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:6px}
+.pipe button::after{content:"→";position:absolute;right:12px;top:14px;color:#6f7468}
+.pipe button:last-child::after{content:""}
+.pipe button.on{border-top:2px solid var(--gold);background:none}
+.pipe button.on::before{color:var(--gold)}
+.pipe button strong{display:block;font-family:var(--serif);font-weight:400;font-size:18px}
+.pipe button span{font-size:12px;color:var(--muted)}
+.how-detail{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:36px;align-items:center}
+.how-detail .txt{min-height:150px}
+.how-detail h3{font-size:24px;margin-bottom:8px}
+.how-detail p{color:var(--soft);margin:0 0 10px}
+.how-detail ul{margin:0;padding-left:18px;color:var(--soft);font-size:14px}
+#hand-frame{aspect-ratio:16/10}
+.vocab{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.vocab div{border:1px solid var(--line);border-radius:5px;padding:12px 14px;display:grid;grid-template-columns:36px 1fr;gap:10px;align-items:center}
+.vocab b{font-size:24px;text-align:center}
+.vocab strong{display:block;font-size:14px}
+.vocab small{color:var(--muted);font-size:12px}
+
+/* Part 7 · fact & fiction */
+.ff{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.ff section{border:1px solid var(--line);border-radius:6px;padding:22px 24px;transition:opacity .4s,border-color .4s}
+.ff h3{font-size:22px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.ff h3 i{font:11px var(--sans);font-style:normal;letter-spacing:2px;padding:3px 8px;border-radius:2px}
+.ff .fact h3 i{background:#8fd0e026;color:var(--water)}
+.ff .fiction h3 i{background:#ddbc7926;color:var(--gold)}
+.ff ul{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.ff li{padding-left:18px;position:relative;color:var(--soft)}
+.ff li::before{content:"";position:absolute;left:0;top:.7em;width:7px;height:1px;background:currentColor}
+.ff li strong{color:var(--ink);font-weight:600}
+.ff[data-focus="fact"] .fiction,.ff[data-focus="fiction"] .fact{opacity:.28}
+.ff[data-focus="fact"] .fact{border-color:#8fd0e066}
+.ff[data-focus="fiction"] .fiction{border-color:#ddbc7966}
+.privacy{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.privacy div{border-top:1px solid var(--line);padding-top:12px;font-size:13px;color:var(--soft)}
+.privacy strong{display:block;color:var(--ink);font-size:14px;margin-bottom:2px}
+
+/* Part 8 · closing */
+#p-end{padding:0}
+#p-end canvas{position:absolute;inset:0}
+#p-end .over{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:22px;padding:90px 6%;pointer-events:none}
+#p-end .over>*{pointer-events:auto}
+#p-end h2{font-size:clamp(30px,4.4vw,64px);text-shadow:0 2px 20px #000a}
+#p-end .lead{margin:0 auto;text-align:center}
+#p-end .cta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+#p-end .cta a{text-decoration:none}
+#p-end .over{overflow-y:auto}
+#p-end .credits{margin-top:18px;font-size:11px;color:#8d917f;letter-spacing:.5px;line-height:1.8;max-width:900px;text-shadow:0 1px 6px #000}
+
+@media (max-width:900px){
+  body{overflow:auto}
+  .split,.moment,.how-detail,.ff{grid-template-columns:1fr;gap:22px}
+  .chapters{grid-template-columns:1fr 1fr}
+  .chapter{min-height:210px}
+  .pipe{grid-template-columns:1fr 1fr}
+  .vocab,.privacy{grid-template-columns:1fr 1fr}
+  .timeline{grid-template-columns:repeat(3,1fr);row-gap:14px}
+  .timeline::before{display:none}
+  #demo-frame{aspect-ratio:4/3;max-height:none}
+  .part{padding:72px 16px 76px}
+  .brand small,.counter{display:none}
+  nav{gap:6px;padding:0 10px}
+  nav .tools button.opt{display:none}
+}
+@media (max-width:520px){
+  .chapters,.vocab,.privacy,.stats{grid-template-columns:1fr}
+  .stat+.stat{border-left:0;padding-left:0;border-top:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">余影 · Shadows Left Behind<small>INTERACTIVE SHADOW THEATER / 001</small></div>
+  <div class="counter" id="counter">PART 01 / 08</div>
+</header>
+
+<main id="deck">
+
+<!-- ============ PART 1 · TITLE ============ -->
+<section class="part" id="p-title" data-title="Title">
+  <canvas data-draw="title" aria-label="Opportunity shadow puppet following the pointer"></canvas>
+  <div class="over">
+    <p class="tag">Abandoned, but not forgotten</p>
+    <div>
+      <h1>Lend me your hands.<em>Let memory move again.</em></h1>
+      <p class="lead" style="margin-top:22px">A gesture-driven digital shadow play about NASA's Opportunity rover: the explorer that stayed on Mars.</p>
+    </div>
+    <div class="sub">
+      <span class="meta">Shadow puppetry × gesture storytelling<br>Opportunity · Mars · 2004–2018</span>
+      <span class="hint">Move your pointer, the puppet follows · Press → to begin</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PART 2 · CONCEPT ============ -->
+<section class="part" data-title="Concept">
+  <div class="inner split">
+    <div class="reveal" style="display:grid;gap:22px">
+      <p class="tag">Part 02 <span>/ The idea</span></p>
+      <h2>An old art form <em>for a robot we left behind.</em></h2>
+      <p class="lead">Chinese shadow puppetry has three parts: a lit screen, a jointed puppet and the rods that move it. <i>Shadows Left Behind</i> keeps all three and adds one change. Your hand becomes the rod.</p>
+      <ul class="pillars">
+        <li><b>幕</b><div><strong>The screen</strong><span>A Canvas-drawn Martian stage, lit like oiled paper.</span></div></li>
+        <li><b>偶</b><div><strong>The puppet</strong><span>Opportunity drawn as a jointed silhouette, still on its rods.</span></div></li>
+        <li><b>手</b><div><strong>The hands</strong><span>Your camera-tracked gestures move the story. Remembering becomes something you do.</span></div></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <div class="frame" id="lamp-frame">
+        <canvas data-draw="lamp" aria-label="Shadow screen demo: move to change the puppet's distance from the screen"></canvas>
+        <div class="readout"><span id="lamp-read">Puppet close to the screen · sharp shadow</span><span class="hint" style="color:#f6e7c9aa">Move up / down</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PART 3 · THE REAL STORY ============ -->
+<section class="part" data-title="Real story">
+  <div class="inner">
+    <div class="reveal" style="display:grid;gap:14px">
+      <p class="tag">Part 03 <span>/ The real Opportunity</span></p>
+      <h2>Built for <em>90 days.</em> It kept going for <em>14 years.</em></h2>
+    </div>
+    <div class="reveal" style="display:grid;gap:18px">
+      <div class="stats">
+        <div class="stat"><b data-count="90">0</b><span>MARTIAN DAYS PLANNED</span></div>
+        <div class="stat"><b data-count="14" data-suffix="+">0</b><span>YEARS ACTUALLY WORKING</span></div>
+        <div class="stat"><b data-count="45.16" data-dec="2" data-prefix="~" data-suffix=" km">0</b><span>DRIVEN ACROSS MARS</span></div>
+      </div>
+      <div class="bars">
+        <div class="bar plan"><span>Planned · 90 sols</span><i style="--w:1.8%"></i></div>
+        <div class="bar"><span>Actual · 2004–2018</span><i style="--w:100%"></i></div>
+      </div>
+    </div>
+    <div class="reveal" style="display:grid;gap:22px">
+      <div class="timeline" id="timeline"></div>
+      <div class="moment" id="moment"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PART 4 · THE EXPERIENCE ============ -->
+<section class="part" data-title="Experience">
+  <div class="inner">
+    <div class="reveal" style="display:grid;gap:14px">
+      <p class="tag">Part 04 <span>/ The experience</span></p>
+      <h2>Four acts, thirteen scenes, <em>one pair of hands.</em></h2>
+      <p class="lead">Each act gives the audience a different gesture and a different job. Click a card to hear Oppy.</p>
+    </div>
+    <div class="chapters reveal" id="chapters"></div>
+    <div class="quote" id="quote">“If you can hear me, lend me a little light.”<small>Click a chapter to play its voice line</small></div>
+  </div>
+</section>
+
+<!-- ============ PART 5 · TRY IT ============ -->
+<section class="part" data-title="Try it">
+  <div class="inner">
+    <div class="reveal" style="display:grid;gap:14px">
+      <p class="tag">Part 05 <span>/ Try it</span></p>
+      <h2>Three moments, <em>playable with a mouse.</em></h2>
+      <p class="lead">The full piece uses your camera. These short versions use your pointer, so you can feel how each act plays.</p>
+    </div>
+    <div class="reveal" style="display:grid;gap:14px">
+      <div class="demo-bar">
+        <div class="tabs" id="demo-tabs">
+          <button class="on" data-mode="0">① Wave away the rocks</button>
+          <button data-mode="1">② Scan for water</button>
+          <button data-mode="2">③ Carry memories home</button>
+        </div>
+        <button id="demo-reset">Reset ↺</button>
+      </div>
+      <div class="frame" id="demo-frame">
+        <canvas data-draw="demo" id="demo-canvas" aria-label="Interactive mini demo"></canvas>
+        <div class="demo-ui">
+          <div class="row"><span class="chip" id="demo-task">Sweep side to side to clear the rocks</span><span class="chip cam" id="demo-cam">With camera: open palm, wave left–right</span></div>
+          <div class="subtitle" id="demo-sub"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PART 6 · HOW IT WORKS ============ -->
+<section class="part" data-title="How it works">
+  <div class="inner">
+    <div class="reveal" style="display:grid;gap:14px">
+      <p class="tag">Part 06 <span>/ How it works</span></p>
+      <h2>From a camera frame <em>to a moving shadow.</em></h2>
+    </div>
+    <div class="pipe reveal" id="pipe"></div>
+    <div class="how-detail reveal">
+      <div class="txt" id="pipe-detail"></div>
+      <div class="frame" id="hand-frame"><canvas data-draw="hand" aria-label="Hand landmark skeleton switching between open palm and pinch"></canvas>
+        <div class="readout"><span id="hand-read">21 landmarks · open palm</span><span>Runs in the browser</span></div></div>
+    </div>
+    <div class="vocab reveal">
+      <div><b>✋</b><span><strong>Open palm</strong><small>Wave to connect · hold the light · release a memory</small></span></div>
+      <div><b>👌</b><span><strong>Pinch</strong><small>Scan a rock · pick up a memory</small></span></div>
+      <div><b>↔</b><span><strong>Move</strong><small>Guide Oppy across Mars to the beacon</small></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PART 7 · FACT & FICTION ============ -->
+<section class="part" data-title="Fact & fiction">
+  <div class="inner">
+    <div class="reveal" style="display:grid;gap:14px">
+      <p class="tag">Part 07 <span>/ Honest storytelling</span></p>
+      <h2>What really happened, <em>and what we imagined.</em></h2>
+      <div class="tabs" id="ff-tabs"><button class="on" data-f="">Show both</button><button data-f="fact">Facts only</button><button data-f="fiction">Fiction only</button></div>
+    </div>
+    <div class="ff reveal" id="ff">
+      <section class="fact"><h3>History <i>FACT</i></h3><ul>
+        <li><strong>2004:</strong> Opportunity lands on Mars for a planned primary mission of 90 Martian days.</li>
+        <li><strong>Last Chance rock:</strong> fine layers at different angles in the rock suggest that water once flowed there.</li>
+        <li><strong>14+ years, ~45.16 km:</strong> how long it actually worked and how far it drove.</li>
+        <li><strong>June 10, 2018:</strong> last communication, during a planet-wide dust storm.</li>
+        <li><strong>February 13, 2019:</strong> NASA declares the mission complete.</li>
+        <li>The NASA photographs shown on stage come from the real mission archive.</li>
+      </ul></section>
+      <section class="fiction"><h3>Story <i>FICTION</i></h3><ul>
+        <li><strong>Oppy's first-person voice</strong> is written for the stage. It is not a real transmission.</li>
+        <li><strong>The “awakening”</strong> is a theatre metaphor. Nothing restarts the real rover.</li>
+        <li><strong>Meeting you</strong>, the memory keepsakes and the photo together are invented moments.</li>
+        <li><strong>“Abandoned”</strong> answers the competition theme emotionally. The mission team never stopped caring.</li>
+        <li>The voice is neural text-to-speech, not an actor's recording.</li>
+      </ul></section>
+    </div>
+    <div class="privacy reveal">
+      <div><strong>Local only</strong>Camera frames are processed on the device.</div>
+      <div><strong>Nothing recorded</strong>No video is stored or uploaded.</div>
+      <div><strong>Works offline</strong>The hand model and voice clips ship with the project.</div>
+      <div><strong>Mouse fallback</strong>Every act can be finished without a camera.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PART 8 · CLOSING ============ -->
+<section class="part" id="p-end" data-title="Closing">
+  <canvas data-draw="end" aria-label="Memory lights rising from Mars to Earth"></canvas>
+  <div class="over">
+    <p class="tag">Abandoned, but not forgotten</p>
+    <h2>“I'm still here on Mars.<br>But my story made it <em>all the way to you.</em>”</h2>
+    <p class="lead">Not to make it work again, but to make it remembered again.</p>
+    <div class="cta">
+      <a href="index.html"><button class="primary">Open the full experience →</button></a>
+      <button id="replay">Watch from the start ↺</button>
+    </div>
+    <p class="hint">For camera gestures, launch with START.bat (runs on localhost)</p>
+  <div class="credits">
+    Concept prototype · Not an official NASA project · Images: NASA/JPL, NASA/JPL/Cornell/ARC, NASA/JPL-Caltech/Cornell/ASU<br>
+    Built with HTML · CSS · Canvas · JavaScript · MediaPipe Hand Landmarker · Voice: Microsoft neural TTS via edge-tts
+  </div>
+  </div>
+</section>
+
+</main>
+
+<nav aria-label="Parts">
+  <button id="prev" aria-label="Previous part">←</button>
+  <div class="pills" id="pills"></div>
+  <button id="next" aria-label="Next part">→</button>
+  <div class="tools">
+    <button id="sound" title="M">Sound: on</button>
+    <button id="rec" class="opt" title="H">Recording mode</button>
+    <button id="fs" class="opt" title="F">⛶</button>
+  </div>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,k)=>a+(b-a)*k;
+
+/* ---------------- shared data ---------------- */
+// Palettes match the four acts in the full piece (app.js stagePalettes).
+const PAL=[
+ ['#f0d7a2','#d7b17a','#997248','#8b674238','#74533844','#e4c48b'],
+ ['#f4c397','#cf8d64','#8b5142','#a24e3d64','#713b3061','#f1ce99'],
+ ['#b8a48a','#8e7a6a','#65544f','#5b555773','#4a3d406e','#b8aa99'],
+ ['#c5d6cc','#8ea9a2','#586f76','#3a596660','#334b566d','#d2e4cf']
+];
+const VOICE={ // English clips from audio/oppy/manifest.json
+ 2:['audio/oppy/en-02-hello.mp3'],3:['audio/oppy/en-03-polished.mp3'],4:['audio/oppy/en-04-polished.mp3'],
+ 5:['audio/oppy/en-05-polished.mp3'],6:['audio/oppy/en-06-polished.mp3'],7:['audio/oppy/en-07-polished.mp3'],
+ 9:['audio/oppy/en-09-polished.mp3'],10:['audio/oppy/en-10-polished.mp3'],11:['audio/oppy/en-11-polished.mp3'],
+ 12:['audio/oppy/en-12-polished.mp3']
+};
+const LINES={
+ 2:"Mmm... I've been asleep for ages. Wait, is someone there? Oh, hello! I'm Opportunity. You can call me Oppy.",
+ 3:"See that glow? Take me over there. Let's have a look!",
+ 4:"Move me next to a rock. Pinch your thumb and index finger together and hold for a moment to scan it.",
+ 5:"You found it! Water once flowed here. I was supposed to work for 90 Martian days. I kept going for more than fourteen years.",
+ 6:"In 2018, a dust storm blocked out the Sun. Can you help me hold on to a little light?",
+ 7:"Just a little longer. I want one last look.",
+ 9:"My last message reached Earth on June 10, 2018. NASA ended my mission the following year.",
+ 10:"You're still here. Will you take my memories back to Earth?",
+ 11:"I remember exploring, keeping going when it got hard, and meeting you.",
+ 12:"I'm still here on Mars. But my story made it all the way to you. Thanks for remembering me."
+};
+
+/* ---------------- sound ---------------- */
+let soundOn=true, audioEl=null, actx=null, playToken=0;
+function stopVoice(){playToken++;if(audioEl){audioEl.pause();audioEl=null}}
+function playVoice(scene,onEnd){
+  stopVoice(); if(!soundOn||!VOICE[scene]){onEnd&&setTimeout(onEnd,2500);return}
+  const token=playToken, list=VOICE[scene]; let i=0;
+  const next=()=>{ if(token!==playToken)return; if(i>=list.length){onEnd&&onEnd();return}
+    audioEl=new Audio(list[i++]); audioEl.onended=next; audioEl.onerror=next; audioEl.play().catch(next); };
+  next();
+}
+function tone(freq=660,dur=.25,type='sine',vol=.08){
+  if(!soundOn)return;
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();
+    o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(vol,actx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+dur);
+    o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+dur)}catch{}
+}
+const chime=()=>{tone(784,.5);setTimeout(()=>tone(1046,.6),120)};
+
+/* ---------------- drawing helpers ---------------- */
+function P(c,pts,fill){c.fillStyle=fill;c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.fill()}
+function L(c,a,b,w,col){c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(b[0],b[1]);c.lineWidth=w;c.strokeStyle=col;c.lineCap='round';c.stroke()}
+function C(c,x,y,r,col){c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=col;c.fill()}
+function fit(cv){
+  const r=cv.getBoundingClientRect(), d=Math.min(window.devicePixelRatio||1,2);
+  const w=Math.max(1,Math.round(r.width)), h=Math.max(1,Math.round(r.height));
+  if(cv.width!==w*d||cv.height!==h*d){cv.width=w*d;cv.height=h*d}
+  const c=cv.getContext('2d'); c.setTransform(d,0,0,d,0,0); return {c,w,h};
+}
+// Opportunity as a jointed shadow puppet (same construction as the full piece). ~220 units wide.
+function rover(c,t,px,py,s,o={}){
+  const ink=o.ink||'#35291f', gold=o.gold||'#b98b4d', sil=!!o.silhouette;
+  c.save();c.translate(px,py);c.scale(s,s);c.translate(0,Math.sin(t*.0014)*2);
+  if(o.rods!==false){L(c,[-52,14],[-120,360],2,o.rodColor||'#59432b88');L(c,[31,-48],[90,360],2,o.rodColor||'#59432b88')}
+  P(c,[[-92,-15],[65,-15],[96,12],[62,38],[-67,38],[-98,10]],ink);
+  P(c,[[-86,-24],[-9,-48],[83,-22],[15,5]],ink);
+  if(!sil){
+    for(let i=0;i<5;i++)L(c,[-70+i*28,-23-i],[i*22-5,-2-i*2],1,gold);
+    for(let k=0;k<4;k++){const f=k*27;P(c,[[-76+f,-22],[-54+f,-26],[-36+f,-17],[-58+f,-12]],'#55443c');L(c,[-72+f,-21],[-54+f,-15],.75,'#d5a569')}
+    L(c,[-86,11],[58,28],1.6,'#c79557');for(let r=0;r<5;r++)C(c,-65+r*25,15+r*2,2,'#e0ab69');
+  }
+  L(c,[2,-21],[2,-102],9,ink);L(c,[2,-78],[25,-99],5,ink);P(c,[[-26,-119],[31,-119],[38,-89],[-25,-89]],ink);
+  const eye=sil?ink:gold;C(c,-12,-104,7,eye);C(c,19,-104,7,eye);
+  if(!sil){const pupil=o.glow?'#ffe9a1':ink;C(c,-12,-104,3,pupil);C(c,19,-104,3,pupil)}
+  L(c,[50,-24],[61,-66],3,ink);c.beginPath();c.ellipse(61,-70,17,6,-.35,0,Math.PI*2);c.fillStyle=ink;c.fill();L(c,[61,-70],[69,-83],2,ink);
+  for(let i=0;i<3;i++){const wx=-70+i*70;L(c,[wx*.75,23],[wx,49],6,ink);C(c,wx,53,20,ink);
+    if(!sil){C(c,wx,53,12,gold);C(c,wx,53,6,ink);for(let j=0;j<6;j++){const a=j*Math.PI/3+(o.spin??t*.0003);L(c,[wx+Math.cos(a)*7,53+Math.sin(a)*7],[wx+Math.cos(a)*16,53+Math.sin(a)*16],2,ink)}}}
+  const armY=o.wave?-50+Math.sin(t*.009)*25:4+Math.sin(t*.002)*10;
+  L(c,[64,22],[110,armY],6,ink);C(c,63,22,5,sil?ink:gold);C(c,110,armY,5,ink);
+  c.restore();
+}
+function backdrop(c,w,h,pal,t,o={}){
+  const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,pal[0]);g.addColorStop(1,pal[1]);c.fillStyle=g;c.fillRect(0,0,w,h);
+  if(o.stars){for(let i=0;i<120;i++){const sx=(i*97.3)%w,sy=(i*53.7)%(h*.62),a=.3+.5*Math.abs(Math.sin(t*.001+i));c.fillStyle=`rgba(255,250,235,${a})`;c.fillRect(sx,sy,i%7?1.2:2,i%7?1.2:2)}}
+  if(o.sun!==false){const sx=w*(o.sunX??.78),sy=h*.24,R=Math.min(w,h)*.08;const rg=c.createRadialGradient(sx,sy,0,sx,sy,R*5);
+    rg.addColorStop(0,'rgba(255,242,205,.6)');rg.addColorStop(1,'rgba(255,242,205,0)');c.fillStyle=rg;c.fillRect(0,0,w,h);C(c,sx,sy,R,pal[5])}
+  const k=h/500;
+  [[.6,pal[3],.00012,34],[.7,pal[4],.0002,24],[.8,pal[2],.0003,14]].forEach(([y,col,sp,amp],n)=>{
+    c.beginPath();c.moveTo(0,h);for(let i=0;i<=48;i++){const x=w*i/48;c.lineTo(x,h*y+Math.sin(i/48*6+n*2.1+t*sp)*amp*k+Math.sin(i/48*17+n)*amp*.28*k)}
+    c.lineTo(w,h);c.closePath();c.fillStyle=col;c.fill()});
+  c.strokeStyle='rgba(255,232,195,.13)';c.lineWidth=1;
+  for(let i=0;i<5;i++){c.beginPath();for(let j=0;j<=30;j++){const x=w*j/30,y=h*(.85+i*.032)+Math.sin(j/30*8+i)*3*k;j?c.lineTo(x,y):c.moveTo(x,y)}c.stroke()}
+  c.fillStyle='rgba(255,246,225,.35)';for(let i=0;i<46;i++){const px=(i*137.5+t*.012*(1+i%3))%w,py=(i*71.3)%(h*.75);c.fillRect(px,py,1.4,1.4)}
+}
+const groundY=(w,h)=>h*.8;
+
+/* ---------------- pointer tracking per canvas ---------------- */
+const ptr=new Map(); // canvas -> {x,y,down,inside} in 0..1
+$$('canvas[data-draw]').forEach(cv=>{
+  const st={x:.62,y:.55,down:false,inside:false};ptr.set(cv,st);
+  const upd=e=>{const r=cv.getBoundingClientRect();st.x=clamp((e.clientX-r.left)/r.width,0,1);st.y=clamp((e.clientY-r.top)/r.height,0,1);st.inside=true};
+  cv.addEventListener('pointermove',upd);
+  cv.addEventListener('pointerdown',e=>{upd(e);st.down=true;cv.setPointerCapture?.(e.pointerId);cv.dispatchEvent(new CustomEvent('press'))});
+  cv.addEventListener('pointerup',e=>{upd(e);st.down=false;cv.dispatchEvent(new CustomEvent('release'))});
+  cv.addEventListener('pointercancel',()=>st.down=false);
+  cv.addEventListener('pointerleave',()=>st.inside=false);
+});
+// title canvas listens on the whole part (overlay covers it)
+$('#p-title').addEventListener('pointermove',e=>{const st=ptr.get($('#p-title canvas'));st.x=e.clientX/innerWidth;st.y=e.clientY/innerHeight;st.inside=true});
+
+/* ---------------- per-part animations ---------------- */
+const DRAW={};
+let titleX=.72,titleLift=0;
+DRAW.title=(cv,t)=>{const {c,w,h}=fit(cv),p=ptr.get(cv);
+  backdrop(c,w,h,PAL[0],t);
+  const minX=w<900?.5:.58;
+  titleX=lerp(titleX,clamp(p.x,minX,.88),.05);titleLift=lerp(titleLift,clamp((.62-p.y)*.25,0,.1),.05);
+  const s=Math.min(w/1100,h/470)*(w<900?.8:1.05);
+  c.fillStyle='#5a3f2526';c.beginPath();c.ellipse(titleX*w,groundY(w,h)+6*s,130*s,14*s,0,0,Math.PI*2);c.fill();
+  rover(c,t,titleX*w,groundY(w,h)-75*s-titleLift*h,s,{glow:true,wave:Math.sin(t*.0006)>.6});
+};
+
+let lampD=.2;
+DRAW.lamp=(cv,t)=>{const {c,w,h}=fit(cv),p=ptr.get(cv);
+  // puppet distance from the screen: top = pressed against the screen (sharp), bottom = near the lamp (big, soft)
+  const tgt=p.inside?clamp((p.y-.15)/.7,0,1):.3+.3*Math.sin(t*.0007);
+  lampD=lerp(lampD,tgt,.06);
+  c.fillStyle='#0d0f0d';c.fillRect(0,0,w,h);
+  const m=w*.06,sx=m,sy=m*.8,sw=w-m*2,sh=h-m*1.6;
+  const g=c.createRadialGradient(w*.5,h*.48,10,w*.5,h*.5,Math.max(sw,sh)*.7);
+  g.addColorStop(0,'#f7e2b0');g.addColorStop(.6,'#e2bf80');g.addColorStop(1,'#9c7444');c.fillStyle=g;c.fillRect(sx,sy,sw,sh);
+  c.strokeStyle='#3a2a1a';c.lineWidth=6;c.strokeRect(sx,sy,sw,sh);
+  const px=p.inside?lerp(.3,.7,p.x):.5+.12*Math.sin(t*.0005);
+  const s=Math.min(w/1100,h/470)*(1.3+lampD*1.6), blur=lampD*14, alpha=1-lampD*.45;
+  c.save();c.beginPath();c.rect(sx,sy,sw,sh);c.clip();c.filter=`blur(${blur.toFixed(1)}px)`;c.globalAlpha=alpha;
+  rover(c,t,px*w,h*.56,s,{silhouette:true,ink:'#21170e',rodColor:'#21170eaa'});c.restore();c.filter='none';c.globalAlpha=1;
+  $('#lamp-read').textContent=lampD<.33?'Puppet close to the screen · sharp shadow':lampD<.66?'Puppet in between · softening':'Puppet near the lamp · big, soft shadow';
+};
+
+/* Part 6 hand skeleton */
+const HAND_OPEN=[[.5,.9],[.38,.82],[.3,.72],[.24,.63],[.19,.55],[.42,.58],[.4,.42],[.39,.32],[.38,.23],[.5,.56],[.5,.38],[.5,.27],[.5,.17],[.58,.58],[.6,.42],[.61,.32],[.62,.24],[.65,.62],[.7,.5],[.73,.42],[.75,.35]];
+const HAND_PINCH=HAND_OPEN.map(p=>p.slice());[[2,[.33,.72]],[3,[.33,.6]],[4,[.36,.49]],[6,[.41,.46]],[7,[.38,.43]],[8,[.365,.485]]].forEach(([i,v])=>HAND_PINCH[i]=v);
+const BONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
+DRAW.hand=(cv,t)=>{const {c,w,h}=fit(cv),p=ptr.get(cv);
+  c.fillStyle='#101716';c.fillRect(0,0,w,h);
+  c.strokeStyle='#ffffff0c';c.lineWidth=1;for(let x=0;x<w;x+=28){c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke()}for(let y=0;y<h;y+=28){c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke()}
+  const k=p.down?1:(Math.sin(t*.0012)+1)/2, kk=k*k*(3-2*k);
+  const S=Math.min(w,h)*.95, ox=(w-S)/2+(Math.sin(t*.0007)*.05)*S, oy=(h-S)/2+S*.02;
+  const pts=HAND_OPEN.map((a,i)=>[ox+lerp(a[0],HAND_PINCH[i][0],kk)*S,oy+lerp(a[1],HAND_PINCH[i][1],kk)*S]);
+  BONES.forEach(([a,b])=>L(c,pts[a],pts[b],2.5,'#ddbc79aa'));
+  pts.forEach((q,i)=>C(c,q[0],q[1],i===4||i===8?6:4,i===4||i===8?'#8fd0e0':'#ede7db'));
+  const d=Math.hypot(pts[4][0]-pts[8][0],pts[4][1]-pts[8][1])/S, pinch=d<.06;
+  if(pinch){c.strokeStyle='#8fd0e0';c.lineWidth=2;c.beginPath();c.arc((pts[4][0]+pts[8][0])/2,(pts[4][1]+pts[8][1])/2,16+Math.sin(t*.01)*3,0,Math.PI*2);c.stroke()}
+  $('#hand-read').textContent='21 landmarks · '+(pinch?'pinch detected':kk<.3?'open palm':'tracking…');
+};
+
+/* Shared paper-cut motifs (same designs as the game, app.js 1.3) */
+function glow(c,x,y,r,rgb,a){if(r<=0||a<=0)return;const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(${rgb},${a})`);g.addColorStop(.3,`rgba(${rgb},${a*.55})`);g.addColorStop(1,`rgba(${rgb},0)`);c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2)}
+const MEM_TINTS=['255,214,120','255,176,110','255,160,170'], MEM_NAMES=['Explore','Persist','Meet'];
+function memIcon(c,mx,my,i,t,s){const ink='#2b2620';
+  c.save();c.translate(mx,my);c.scale(s,s);c.rotate(Math.sin(t*.0018+i)*.08);c.lineJoin='round';c.lineCap='round';
+  if(i===0){const rock=[[-15,8],[-17,-3],[-6,-13],[10,-10],[17,1],[13,9]];
+    c.beginPath();rock.forEach(([x,y],k)=>k?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.lineWidth=4;c.strokeStyle=ink;c.stroke();c.fillStyle='#c79a68';c.fill();
+    P(c,[[-17,-3],[-6,-13],[10,-10],[2,-4],[-9,-2]],'#e0b884');
+    for(let r=0;r<2;r++){c.beginPath();for(let k=-11;k<=12;k++){const yy=1+r*4+Math.sin(k*.45-t*.006+r)*1.2;k===-11?c.moveTo(k,yy):c.lineTo(k,yy)}c.lineWidth=1.8;c.strokeStyle='#7fe0f5';c.stroke()}}
+  else if(i===1){c.rotate(t*.0006);c.beginPath();for(let k=0;k<16;k++){const a=k*Math.PI/8,r=k%2?9:17;k?c.lineTo(Math.cos(a)*r,Math.sin(a)*r):c.moveTo(Math.cos(a)*r,Math.sin(a)*r)}c.closePath();
+    c.lineWidth=3.5;c.strokeStyle=ink;c.stroke();c.fillStyle='#f3b25e';c.fill();c.beginPath();c.arc(0,0,8,0,Math.PI*2);c.fillStyle='#ffe3a3';c.fill();c.lineWidth=1.5;c.stroke();C(c,-2.5,-2.5,2.2,'#fff7e2')}
+  else{const f=[[-7,-4,-10,-15],[-2,-6,-3,-18],[3,-6,4,-18],[8,-4,10,-14]];
+    for(const [wd,col] of [[7.5,ink],[4.5,'#ffd9cf']]){c.strokeStyle=col;c.lineWidth=wd;for(const [a,b,d,e] of f){c.beginPath();c.moveTo(a,b);c.lineTo(d,e);c.stroke()}
+      c.beginPath();c.moveTo(-8,4);c.lineTo(-16,-3);c.stroke();c.beginPath();c.ellipse(0,3,wd===7.5?11.5:10,wd===7.5?10.5:9,0,0,Math.PI*2);c.fillStyle=col;c.fill()}
+    c.fillStyle='#f28b9a';c.beginPath();c.moveTo(0,8);c.bezierCurveTo(-6,3,-4,-2,0,1);c.bezierCurveTo(4,-2,6,3,0,8);c.fill()}
+  c.restore()}
+function memLabel(c,x,y,text,a=1){const wd=text.length*6.4+16;c.save();c.globalAlpha=a;c.fillStyle='rgba(42,29,21,.82)';c.beginPath();c.roundRect?c.roundRect(x-wd/2,y,wd,17,8):c.rect(x-wd/2,y,wd,17);c.fill();
+  c.font='bold 10px Arial';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff1cf';c.fillText(text,x,y+9);c.restore()}
+const EARTH_LAND=[[[-.55,-.55],[-.2,-.62],[-.05,-.38],[-.22,-.18],[-.12,.05],[-.38,.12],[-.5,-.12],[-.68,-.25]],[[.15,-.2],[.42,-.3],[.55,-.05],[.4,.25],[.22,.55],[.08,.3],[.12,.02]],[[-.45,.4],[-.15,.35],[-.05,.55],[-.3,.68]]];
+function paperEarth(c,cx,cy,R,t,active,ring=true){
+  glow(c,cx,cy,R*2,'236,244,226',active?.4:.26);
+  c.save();L(c,[cx+R*.15,cy+R*.95],[cx+R*1.1,cy+R*7],1.6,'#3a4a4a66');C(c,cx+R*.15,cy+R*.95,2.5,'#c9a46a');
+  c.beginPath();c.arc(cx,cy,R,0,Math.PI*2);c.clip();c.fillStyle='#35667c';c.fillRect(cx-R,cy-R,R*2,R*2);C(c,cx-R*.12,cy-R*.12,R*.92,'#5d9ab0');
+  const span=R*2.6,sh=(t*R*.00012)%span;for(const cp of [-span,0,span])for(const sp of EARTH_LAND)P(c,sp.map(([x,y])=>[cx+x*R+sh+cp,cy+y*R]),'#b5c99a');
+  const cs=(t*R*.0002)%span;for(const cp of [-span,0,span])for(const [ox,oy,len] of [[-.7,-.75,.55],[.05,-.42,.5],[-.35,.2,.45],[.3,.72,.5]]){const x0=cx+ox*R+cs+cp,y0=cy+oy*R;P(c,[[x0,y0],[x0+len*R*.3,y0-R*.07],[x0+len*R,y0-R*.03],[x0+len*R*.85,y0+R*.05],[x0+len*R*.15,y0+R*.05]],'rgba(243,236,218,.85)')}
+  P(c,[[cx+R*.35,cy-R],[cx+R,cy-R],[cx+R,cy+R],[cx-R*.2,cy+R],[cx+R*.55,cy+R*.25]],'rgba(28,48,62,.32)');c.restore();
+  c.save();c.strokeStyle='#2b2620';c.lineWidth=2.5;c.beginPath();c.arc(cx,cy,R,0,Math.PI*2);c.stroke();c.strokeStyle='rgba(233,207,152,.85)';c.lineWidth=1;c.beginPath();c.arc(cx,cy,R+3,0,Math.PI*2);c.stroke();
+  if(ring){c.strokeStyle=active?'rgba(251,226,170,.95)':'rgba(251,226,170,.6)';c.lineWidth=active?2:1.4;c.setLineDash([6,8]);c.lineDashOffset=-t*.02;c.beginPath();c.arc(cx,cy,R*1.5+(active?Math.sin(t*.008)*3:0),0,Math.PI*2);c.stroke();c.setLineDash([])}
+  c.restore()}
+/* Celebration bursts + hop (demo) */
+let bursts=[],hopStart=-1e9;
+function celebrate(nx,ny,big=false){const now=performance.now(),pieces=[];
+  for(let k=0;k<(big?34:18);k++){const a=-Math.PI/2+(Math.random()-.5)*Math.PI*1.7,sp=(big?260:190)*(.55+Math.random()*.6);pieces.push({vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,spin:(Math.random()-.5)*4,size:(big?9:7)*(.6+Math.random()*.7),tw:Math.random()*6})}
+  bursts.push({nx,ny,start:now,pieces,big});if(bursts.length>8)bursts.shift();hopStart=now;
+  [784,988,1175,1568].slice(0,big?4:3).forEach((f,i)=>setTimeout(()=>tone(f,.35,'triangle',.05),80+i*70))}
+const hop=t=>{const k=(t-hopStart)/650;return k<0||k>1?0:Math.sin(k*Math.PI)*34*(1-k*.3)};
+function drawBursts(c,w,h,t){for(let b=bursts.length-1;b>=0;b--){const B=bursts[b],age=(t-B.start)/1000,life=B.big?1.6:1.2;if(age>life){bursts.splice(b,1);continue}if(age<0)continue;
+  const ox=B.nx*w,oy=B.ny*h,fade=1-age/life;c.save();c.strokeStyle=`rgba(255,244,210,${.7*fade})`;c.lineWidth=3*fade+1;c.beginPath();c.arc(ox,oy,20+age*(B.big?200:140),0,Math.PI*2);c.stroke();
+  if(age<.25)glow(c,ox,oy,70*(1-age*2),'255,240,200',.6*(1-age*4));
+  const star=r=>{c.beginPath();for(let k=0;k<10;k++){const a=-Math.PI/2+k*Math.PI/5,rr=k%2?r*.45:r;k?c.lineTo(Math.cos(a)*rr,Math.sin(a)*rr):c.moveTo(Math.cos(a)*rr,Math.sin(a)*rr)}c.closePath()};
+  for(const p of B.pieces){const px=ox+p.vx*age,py=oy+p.vy*age+260*age*age,shine=Math.min(1,fade*1.4)*(.75+.25*Math.sin(age*18+p.tw));
+    glow(c,px,py,p.size*3.2,'255,226,140',.55*shine);
+    c.save();c.translate(px,py);c.rotate(p.spin*age);c.globalAlpha=shine;star(p.size);c.fillStyle='#ffe9a8';c.fill();star(p.size*.45);c.fillStyle='#fffbea';c.fill();c.restore()}c.restore()}}
+
+/* Part 8 closing */
+DRAW.end=(cv,t)=>{const {c,w,h}=fit(cv);
+  backdrop(c,w,h,['#0f1820','#2c2a2c',PAL[2][2],'#3a3036aa','#2e262bcc','#d2e4cf'],t,{stars:true,sun:false});
+  const ex=w*.84,ey=h*.17,R=Math.max(18,Math.min(w,h)*.045);
+  paperEarth(c,ex,ey,R,t,false,false);
+  const s=Math.min(w/1100,h/470)*.7, rx=w*.16, ry=groundY(w,h)-75*s;
+  rover(c,t,rx,ry,s,{glow:true,rods:false,ink:'#1a1513',gold:'#6b5a44'});
+  for(let i=0;i<3;i++){const ph=((t*.00009+i/3)%1),e=ph*ph*(3-2*ph);
+    const x=lerp(rx+40*s,ex,e),y=lerp(ry-60*s,ey,e)-Math.sin(e*Math.PI)*h*.18,a=Math.sin(ph*Math.PI);
+    glow(c,x,y,34,MEM_TINTS[i],.5*a);c.save();c.globalAlpha=a;memIcon(c,x,y,i,t,1.1*(1-e*.4));c.restore()}
+};
+
+/* ---------------- Part 3 · timeline ---------------- */
+const MOMENTS=[
+ {d:'JAN 2004',t:'Landing',h:'Arriving at Meridiani Planum',p:'Opportunity lands on Mars. Its job is to read the rocks and soil for signs of ancient water, over a planned primary mission of 90 Martian days.',big:['Sol 1','MERIDIANI PLANUM']},
+ {d:'MAR 2, 2004',t:'Last Chance',h:'Evidence of flowing water',p:'On a rock called “Last Chance”, fine layers lie at different angles. They suggest that water once flowed across this place.',img:'assets/nasa/last-chance-rock.jpg',cr:'PIA05625 · NASA/JPL/Cornell/ARC'},
+ {d:'JUL 26, 2004',t:'Its own shadow',h:'Opportunity photographs its shadow',p:'At Endurance Crater, the rover catches its own long shadow on the ground. This image inspired the shadow-puppet idea.',img:'assets/nasa/opportunity-shadow.jpg',cr:'PIA06739 · NASA/JPL'},
+ {d:'2004 – 2018',t:'Keeps going',h:'Fourteen years, ~45.16 km',p:'Ninety days became more than fourteen years. It went far beyond the plan, one drive at a time.',big:['14+ yrs','~45.16 KM DRIVEN']},
+ {d:'JUN 10, 2018',t:'Last message',h:'The last image it sent',p:'A planet-wide dust storm blocks out the Sun and the solar panels lose power. This incomplete frame was its last transmission.',img:'assets/nasa/opportunity-last-message.jpg',cr:'PIA22929 · NASA/JPL-Caltech/Cornell/ASU'},
+ {d:'FEB 13, 2019',t:'Mission complete',h:'Earth stops waiting',p:'The team keeps calling for months. NASA then declares the mission complete. Opportunity stays on Mars.',big:['2019','MISSION COMPLETE']}
+];
+let momentI=0;
+function showMoment(i){momentI=i;$$('#timeline button').forEach((b,j)=>b.classList.toggle('on',j===i));const m=MOMENTS[i];
+  $('#moment').innerHTML=`<div class="pic">${m.img?`<img src="${m.img}" alt="${m.h}">`:`<div class="big">${m.big[0]}<small>${m.big[1]}</small></div>`}</div>
+   <div><p class="tag" style="margin-bottom:8px">${m.d}</p><h3>${m.h}</h3><p>${m.p}</p>${m.cr?`<span class="credit">Image: ${m.cr}</span>`:''}</div>`;}
+$('#timeline').innerHTML=MOMENTS.map((m,i)=>`<button data-i="${i}"><small>${m.d}</small><span>${m.t}</span></button>`).join('');
+$$('#timeline button').forEach(b=>b.onclick=()=>{showMoment(+b.dataset.i);tone(520,.2)});
+showMoment(0);
+function runCounters(sec){sec.querySelectorAll('[data-count]').forEach(el=>{const to=+el.dataset.count,dec=+(el.dataset.dec||0),t0=performance.now();
+  const step=now=>{const k=clamp((now-t0)/1800,0,1),e=1-Math.pow(1-k,3);el.textContent=(el.dataset.prefix||'')+(to*e).toFixed(dec)+(el.dataset.suffix||'');if(k<1&&sec.classList.contains('on'))requestAnimationFrame(step)};requestAnimationFrame(step)})}
+
+/* ---------------- Part 4 · chapters ---------------- */
+const CHAPTERS=[
+ {no:'00 · PROLOGUE',h:'Behind the rocks',g:'✋',p:'Wave to sweep the rocks away. Oppy wakes up and follows your hand to a glowing beacon.',scene:2,pal:0},
+ {no:'01 · ACT I',h:'Clues in the rocks',g:'👌',p:'Guide Oppy to three rocks and pinch to scan them for traces of ancient water.',scene:5,pal:1},
+ {no:'02 · ACT II',h:'The long night',g:'✋',p:'A dust storm hides the Sun. Hold your palm open to keep a little light on. Then comes the silence.',scene:6,pal:2},
+ {no:'03 · ACT III',h:'Bring memories home',g:'👌',p:'Pinch to pick up three memories, carry them to Earth, and open your hand to let go.',scene:10,pal:3},
+ {no:'EPILOGUE',h:'Home',g:'📷',p:'Oppy says goodbye. Take a photo together and open the letter Oppy leaves you.',scene:12,pal:3}
+];
+$('#chapters').innerHTML=CHAPTERS.map((ch,i)=>{const p=PAL[ch.pal];return `<button class="chapter" data-i="${i}" style="background:linear-gradient(170deg,${p[0]},${p[1]} 70%,${p[2]})"><span class="no">${ch.no}</span><span class="g">${ch.g}</span><h3>${ch.h}</h3><p>${ch.p}</p><span class="play">Hear Oppy</span></button>`}).join('');
+$$('.chapter').forEach(b=>b.onclick=()=>{const ch=CHAPTERS[+b.dataset.i],was=b.classList.contains('playing');
+  $$('.chapter').forEach(x=>x.classList.remove('playing','on'));stopVoice();if(was)return;
+  b.classList.add('playing','on');$('#quote').innerHTML=`“${LINES[ch.scene]}”<small>Oppy · ${ch.no}</small>`;
+  const est=Math.max(3,LINES[ch.scene].split(' ').length*.38);b.style.setProperty('--dur',est+'s');
+  playVoice(ch.scene,()=>b.classList.remove('playing'));});
+
+/* ---------------- Part 5 · demo ---------------- */
+const MODES=[
+ {task:'Sweep side to side to clear the rocks',cam:'With camera: open palm, wave left–right',pal:0},
+ {task:'Hold the pointer on a rock to scan it (0 / 3)',cam:'With camera: pinch near a rock',pal:1},
+ {task:'Drag each memory to Earth (0 / 3)',cam:'With camera: pinch to grab, open to release',pal:3}
+];
+const demo={mode:0,done:false};
+function demoReset(m=demo.mode){
+  Object.assign(demo,{mode:m,done:false,turns:0,dir:0,ext:null,flyT:0,rx:.5,
+    rocks:Array.from({length:11},(_,i)=>({a:-Math.PI*.95+i*Math.PI*.9/10,r:.6+((i*37)%10)/22,sz:.75+((i*53)%10)/22,vx:0,vy:0,ox:0,oy:0})),
+    scan:[.22,.5,.78].map(x=>({x,hold:0,done:false})),
+    mem:[0,1,2].map(i=>({x:.42+i*.13,y:[.5,.4,.52][i],home:false,k:0})),grab:-1,last:performance.now()});
+  $$('#demo-tabs button').forEach(b=>b.classList.toggle('on',+b.dataset.mode===m));
+  $('#demo-task').textContent=MODES[m].task;$('#demo-cam').textContent=MODES[m].cam;
+  $('#demo-sub').classList.remove('show');stopVoice();
+}
+function demoWin(scene){demo.done=true;chime();const sub=$('#demo-sub');sub.textContent=LINES[scene];sub.classList.add('show');setTimeout(()=>playVoice(scene),450)}
+$$('#demo-tabs button').forEach(b=>b.onclick=()=>demoReset(+b.dataset.mode));
+$('#demo-reset').onclick=()=>demoReset();
+const dcv=$('#demo-canvas');
+dcv.addEventListener('press',()=>{if(demo.mode!==2||demo.done)return;const p=ptr.get(dcv),r=dcv.getBoundingClientRect(),asp=r.width/r.height;
+  demo.mem.forEach((m,i)=>{if(!m.home&&Math.hypot((p.x-m.x)*asp,p.y-m.y)<.09)demo.grab=i});if(demo.grab>=0)tone(880,.15)});
+dcv.addEventListener('release',()=>{if(demo.grab<0)return;const m=demo.mem[demo.grab],r=dcv.getBoundingClientRect(),asp=r.width/r.height;
+  if(Math.hypot((m.x-.86)*asp,m.y-.2)<.14){m.home=true;chime();const n=demo.mem.filter(q=>q.home).length;celebrate(.86,.2,n===3);$('#demo-task').textContent=`Drag each memory to Earth (${n} / 3)`;if(n===3)setTimeout(()=>demoWin(12),500)}
+  demo.grab=-1});
+DRAW.demo=(cv,t)=>{const {c,w,h}=fit(cv),p=ptr.get(cv),m=demo.mode,dt=Math.min(50,t-demo.last);demo.last=t;
+  backdrop(c,w,h,PAL[MODES[m].pal],t,{stars:m===2,sun:m!==2});
+  const s=Math.min(w/1100,h/470)*1.05, gy=groundY(w,h), aspect=w/h;
+  if(m===0){
+    if(p.inside&&!demo.done){const x=p.x,th=.07;if(demo.ext===null)demo.ext=x;
+      if(demo.dir>=0){if(x>demo.ext)demo.ext=x;else if(demo.ext-x>th){demo.turns++;demo.dir=-1;demo.ext=x;tone(300+demo.turns*60,.18,'triangle',.05)}}
+      else{if(x<demo.ext)demo.ext=x;else if(x-demo.ext>th){demo.turns++;demo.dir=1;demo.ext=x;tone(300+demo.turns*60,.18,'triangle',.05)}}
+      $('#demo-task').textContent=`Sweep side to side to clear the rocks (${Math.min(demo.turns,4)} / 4)`;
+      if(demo.turns>=4){demoWin(2);celebrate(.5,.62,true);demo.rocks.forEach(r=>{r.vx=Math.cos(r.a)*(4+Math.random()*4)*(Math.cos(r.a)<0?1:1);r.vy=-6-Math.random()*5})}}
+    const cx=w*.5,cy=gy-40*s, prog=Math.min(demo.turns,4)/4;
+    rover(c,t,cx,gy-75*s-hop(t)*s,s,{glow:demo.done,wave:demo.done,rods:true});
+    demo.rocks.forEach((r,i)=>{if(demo.done){r.ox+=r.vx*dt*.06;r.oy+=r.vy*dt*.06;r.vy+=.5*dt*.06}
+      const spread=prog*28*s;const x=cx+Math.cos(r.a)*r.r*120*s+Math.cos(r.a)*spread+r.ox, y=cy+Math.sin(r.a)*r.r*90*s+20*s+r.oy-Math.abs(Math.sin(r.a))*prog*6*s;
+      const R=r.sz*58*s;c.fillStyle=i%2?'#6b4c33':'#7a5a3d';c.beginPath();for(let k=0;k<7;k++){const a=k/7*Math.PI*2,rr=R*(.8+((i*13+k*7)%5)/16);k?c.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr*.75):c.moveTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr*.75)}c.closePath();c.fill();
+      L(c,[x-R*.4,y-R*.2],[x+R*.2,y-R*.35],1.2,'#a07a52')});
+    if(p.inside&&!demo.done){const hx=p.x*w,hy=p.y*h,g=c.createRadialGradient(hx,hy,0,hx,hy,70);g.addColorStop(0,'rgba(30,20,12,.35)');g.addColorStop(1,'rgba(30,20,12,0)');c.fillStyle=g;c.fillRect(hx-70,hy-70,140,140)}
+  }
+  if(m===1){
+    demo.rx=lerp(demo.rx,p.inside?clamp(p.x,.1,.9):demo.rx,.08);
+    let n=0;
+    demo.scan.forEach(r=>{const x=r.x*w,y=gy+6*s,R=46*s;
+      const near=p.down&&Math.abs(p.x-r.x)*w<R*1.4&&!r.done&&!demo.done;
+      if(near){r.hold+=dt;if(r.hold>=800){r.done=true;chime();celebrate(r.x,(y-R*.5)/h,demo.scan.filter(q=>q.done).length===3)}}else if(!r.done)r.hold=Math.max(0,r.hold-dt*2);
+      P(c,[[x-R,y],[x-R*.7,y-R*.7],[x-R*.1,y-R*.95],[x+R*.6,y-R*.75],[x+R,y]],'#6e4f37');
+      for(let k=0;k<4;k++)L(c,[x-R*.8,y-R*(.15+k*.17)],[x+R*.85,y-R*(.12+k*.15)-((k%2)?4:0)*s],1.2,r.done?'#8fd0e0':'#9a7550');
+      if(r.done){n++;const g=c.createRadialGradient(x,y-R*.5,0,x,y-R*.5,R*1.6);g.addColorStop(0,'rgba(143,208,224,.35)');g.addColorStop(1,'rgba(143,208,224,0)');c.fillStyle=g;c.fillRect(x-R*2,y-R*2.2,R*4,R*3)}
+      else if(r.hold>0){c.strokeStyle='#ffe9a1';c.lineWidth=4;c.beginPath();c.arc(x,y-R*.45,R*.75,-Math.PI/2,-Math.PI/2+Math.PI*2*r.hold/800);c.stroke()}
+      else{c.fillStyle='#2a2018aa';c.font=`${Math.max(10,12*s)}px Arial`;c.textAlign='center';c.fillText('hold here',x,y+R*.55)}
+    });
+    rover(c,t,demo.rx*w,gy-75*s-8*s-hop(t)*s*.8,s*.8,{glow:true,spin:demo.rx*20});
+    if(p.down&&!demo.done){const near=demo.scan.find(r=>!r.done&&Math.abs(p.x-r.x)*w<46*s*1.4);if(near){c.strokeStyle='rgba(255,233,161,.5)';c.lineWidth=2;c.setLineDash([4,6]);L(c,[demo.rx*w+20*s,gy-150*s],[near.x*w,gy-20*s],1.5,'rgba(255,233,161,.6)');c.setLineDash([])}}
+    if(!demo.done){$('#demo-task').textContent=`Hold the pointer on a rock to scan it (${n} / 3)`;if(n===3)demoWin(5)}
+  }
+  if(m===2){
+    const ex=w*.86,ey=h*.2,R=Math.min(w,h)*.07;
+    paperEarth(c,ex,ey,R,t,demo.grab>=0);
+    c.fillStyle='#f3ead4';c.font='11px Arial';c.textAlign='center';c.fillText('EARTH',ex,ey+R*1.5+18);
+    rover(c,t,w*.24,gy-75*s-hop(t)*s,s*.85,{glow:true,rods:true});
+    demo.mem.forEach((mm,i)=>{if(demo.grab===i){mm.x=p.x;mm.y=p.y}
+      if(mm.home){mm.k=Math.min(1,mm.k+dt/600);mm.x=lerp(mm.x,.86,.12);mm.y=lerp(mm.y,.2,.12)}
+      if(mm.home&&mm.k>=1)return;
+      const x=mm.x*w,y=mm.y*h+(demo.grab===i?0:Math.sin(t*.003+i)*4),a=1-mm.k,held=demo.grab===i;
+      glow(c,x,y,(held?46:38)*s,MEM_TINTS[i],.5*a);
+      c.save();c.globalAlpha=a;memIcon(c,x,y-2,i,t,(held?1.55:1.3)*s*(1-mm.k*.5));c.restore();
+      memLabel(c,x,y+26*s,MEM_NAMES[i],a)});
+  }
+  drawBursts(c,w,h,t);
+};
+
+/* ---------------- Part 6 · pipeline ---------------- */
+const PIPE=[
+ {t:'Camera',s:'local video',h:'1 · The camera stays local',p:'The browser asks once for camera access. Frames go straight to the tracker on the same machine. Nothing is recorded or uploaded.',li:['getUserMedia, Chrome / Edge recommended','A mouse fallback runs without any camera']},
+ {t:'Hand Landmarker',s:'MediaPipe',h:'2 · Finding the hand',p:'Google MediaPipe Tasks Vision (0.10.21) finds 21 landmarks on the hand in every frame. The model ships in /vendor, so it works offline.',li:['21 points per hand: wrist, knuckles, fingertips','Apache-2.0 runtime, bundled with the piece']},
+ {t:'Gesture rules',s:'open · pinch · move',h:'3 · Turning points into intent',p:'Simple geometry classifies the hand: fingertip spread for an open palm, thumb-to-index distance for a pinch, palm position for movement. A gesture must be held briefly and released before it counts again.',li:['Wave: 4 direction changes · Scan: hold ~0.4–0.8 s','Hold timers and release rules filter out jitter']},
+ {t:'Story engine',s:'13 scenes · 4 acts',h:'4 · A small theatre script',p:'A state machine walks through 13 scenes. Each scene sets its own task, gesture, palette and subtitle, and only advances once the task is done and the line has finished.',li:['Space / click advance dialogue · 1 2 3 jump acts','Real NASA photos appear at key moments']},
+ {t:'Shadow stage',s:'Canvas + voice',h:'5 · Light, shadow and voice',p:'Everything on stage is drawn in Canvas code, with no image assets for the puppet or terrain. Oppy speaks through pre-generated neural voice clips, and sound effects are synthesised live.',li:['HTML · CSS · Canvas · vanilla JavaScript','Bilingual: Chinese / English, switch anytime']}
+];
+$('#pipe').innerHTML=PIPE.map((x,i)=>`<button data-i="${i}"><strong>${x.t}</strong><span>${x.s}</span></button>`).join('');
+function showPipe(i){$$('#pipe button').forEach((b,j)=>b.classList.toggle('on',j===i));const x=PIPE[i];
+  $('#pipe-detail').innerHTML=`<h3>${x.h}</h3><p>${x.p}</p><ul>${x.li.map(l=>`<li>${l}</li>`).join('')}</ul>`}
+$$('#pipe button').forEach(b=>b.onclick=()=>showPipe(+b.dataset.i));showPipe(0);
+
+/* ---------------- Part 7 · filter ---------------- */
+$$('#ff-tabs button').forEach(b=>b.onclick=()=>{$$('#ff-tabs button').forEach(x=>x.classList.toggle('on',x===b));$('#ff').dataset.focus=b.dataset.f});
+
+/* ---------------- deck navigation ---------------- */
+const parts=$$('.part');let cur=-1;
+$('#pills').innerHTML=parts.map((p,i)=>`<button data-i="${i}"><b>${String(i+1).padStart(2,'0')}</b>${p.dataset.title}</button>`).join('');
+$$('#pills button').forEach(b=>b.onclick=()=>go(+b.dataset.i));
+function go(i){i=clamp(i,0,parts.length-1);if(i===cur)return;
+  stopVoice();$$('.chapter').forEach(x=>x.classList.remove('playing','on'));
+  parts.forEach((p,j)=>p.classList.toggle('on',j===i));cur=i;
+  $$('#pills button').forEach((b,j)=>b.classList.toggle('on',j===i));
+  $$('#pills button')[i].scrollIntoView({block:'nearest',inline:'nearest'});
+  $('#counter').textContent=`PART ${String(i+1).padStart(2,'0')} / ${String(parts.length).padStart(2,'0')}`;
+  history.replaceState(null,'','#'+(i+1));
+  if(parts[i].querySelector('[data-count]'))runCounters(parts[i]);
+  if(parts[i].contains(dcv))demoReset(demo.mode);
+}
+$('#prev').onclick=()=>go(cur-1);$('#next').onclick=()=>go(cur+1);$('#replay').onclick=()=>go(0);
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),1600)}
+function toggleRec(){document.body.classList.toggle('rec');const on=document.body.classList.contains('rec');$('#rec').textContent=on?'Recording: on':'Recording mode';toast(on?'Recording mode on · press H to show controls':'Controls visible')}
+function toggleSound(){soundOn=!soundOn;$('#sound').textContent='Sound: '+(soundOn?'on':'off');if(!soundOn)stopVoice()}
+async function toggleFs(){try{document.fullscreenElement?await document.exitFullscreen():await document.documentElement.requestFullscreen()}catch{toast('Fullscreen not available')}}
+$('#rec').onclick=toggleRec;$('#sound').onclick=toggleSound;$('#fs').onclick=toggleFs;
+addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return;const k=e.key;
+  if(k==='ArrowRight'||k==='PageDown'||(k===' '&&document.activeElement.tagName!=='BUTTON')){e.preventDefault();go(cur+1)}
+  else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();go(cur-1)}
+  else if(k==='Home')go(0);else if(k==='End')go(parts.length-1);
+  else if(/^[1-9]$/.test(k)&&+k<=parts.length)go(+k-1);
+  else if(k==='h'||k==='H')toggleRec();else if(k==='m'||k==='M')toggleSound();else if(k==='f'||k==='F')toggleFs();});
+let tx=null;addEventListener('touchstart',e=>{tx=e.target.closest('canvas')?null:e.touches[0].clientX},{passive:true});
+addEventListener('touchend',e=>{if(tx===null)return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>70)go(cur+(dx<0?1:-1));tx=null});
+addEventListener('hashchange',()=>{const n=parseInt(location.hash.slice(1));if(n)go(n-1)});
+
+/* ---------------- render loop: only the visible part draws ---------------- */
+demoReset(0);
+go(clamp((parseInt(location.hash.slice(1))||1)-1,0,parts.length-1));
+function loop(t){if(cur>=0)parts[cur].querySelectorAll('canvas[data-draw]').forEach(cv=>{const f=DRAW[cv.dataset.draw];if(f&&cv.offsetWidth)f(cv,t)});requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

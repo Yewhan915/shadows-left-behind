@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>余影 · Shadows Left Behind</title><link rel="stylesheet" href="style.css?v=20261115-rec5">
+<body><header><div class="header-left"><button id="language" type="button" aria-label="Switch to English">中文 / English</button><a class="brand" href="#">余影 <span>SHADOWS LEFT BEHIND</span></a></div><span class="edition">交互皮影实验 / 001</span><button id="about">作品与史实 ↗</button></header>
+<main><div class="play">
+<section class="theater"><div class="stage-top"><span>✦ 火星 · 子午线高原</span><span id="mode">鼠标模式 · 移动鼠标操偶</span><button id="fullscreen">全屏舞台 ⛶</button></div><div class="screen" id="screen"><canvas id="stage" aria-label="机遇号互动皮影舞台"></canvas><div class="act-label" id="act-label">序幕 / 等待一双手</div><div class="stage-hint" id="stage-hint">移动鼠标，让皮影跟随你 · 点击「开始故事」</div><figure id="nasa-record" hidden>
+ <img id="nasa-photo" alt="">
+ <figcaption><strong id="nasa-title"></strong><span id="nasa-detail"></span><a id="nasa-source" target="_blank" rel="noopener"></a></figcaption>
+</figure><div id="act-curtain" aria-hidden="true"></div><section id="cam-card" aria-labelledby="cam-card-title"><span class="cam-card-icon" aria-hidden="true">📷</span><h2 id="cam-card-title"></h2><p id="cam-card-text"></p><p id="cam-card-privacy"></p><div class="cam-card-actions"><button type="button" class="primary" id="cam-card-on"></button><button type="button" id="cam-card-mouse"></button></div></section><div id="gesture-coach" hidden><span id="coach-hand" aria-hidden="true"></span><span id="coach-text"></span><small id="coach-hint" hidden></small></div><section id="evidence" aria-labelledby="evidence-title" hidden>
+<h2 id="evidence-title"></h2><p id="evidence-note"></p>
+<div id="evidence-options"><button type="button" id="evidence-a"></button><button type="button" id="evidence-b"></button><button type="button" id="evidence-c"></button></div>
+<i id="evidence-cursor" aria-hidden="true" hidden></i><p id="evidence-feedback" role="status"></p><button type="button" class="primary" id="evidence-next" hidden></button>
+</section><section id="storybook" aria-labelledby="sb-title"><div class="sb-rays" aria-hidden="true"></div><div class="sb-dust" id="sb-dust" aria-hidden="true"></div><div class="sb-inner">
+ <p class="sb-eyebrow" id="sb-eyebrow"></p><h2 class="sb-title" id="sb-title"></h2>
+ <div class="sb-shelf" id="sb-shelf"></div>
+ <p class="sb-hint" id="sb-hint" role="status"></p>
+</div><div class="sb-sparks" id="sb-sparks" aria-hidden="true"></div><div class="sb-flash" aria-hidden="true"></div></section><div class="caption"><span id="speaker">OPPORTUNITY / 机遇号</span><p id="line" aria-live="polite">如果你能听见，请借我一点光。</p></div><div id="ending" hidden><span>ABANDONED, BUT NOT FORGOTTEN</span><h2>我留在了火星。<br>我的故事，抵达了你。</h2><p>谢谢你，成为这一次的操偶人。</p><i id="ending-hand-cursor" class="photo-dwell-cursor" aria-hidden="true" hidden></i><p id="ending-hand-hint" hidden></p><div class="ending-actions"><button class="primary" id="photo-open">和 Oppy 合照</button><button id="again">再讲一次 ↺</button></div></div>
+<dialog id="photo-dialog" aria-labelledby="photo-title">
+ <h2 id="photo-title">和 Oppy 合照</h2>
+ <p id="photo-note"></p>
+ <div id="photo-live" hidden><canvas id="photo-stage" width="640" height="340"></canvas><video id="photo-video" autoplay playsinline muted></video></div>
+ <button type="button" id="photo-envelope" hidden aria-controls="oppy-letter" aria-expanded="false">
+ <span class="envelope-art" aria-hidden="true"><i></i></span><span id="envelope-label"></span>
+</button>
+<article id="oppy-letter" hidden>
+ <h3 id="letter-greeting"></h3><p id="letter-body"></p><p id="letter-signature"></p>
+ <canvas id="photo-result" width="1280" height="680" hidden></canvas>
+</article>
+ <i id="photo-hand-cursor" class="photo-dwell-cursor" aria-hidden="true" hidden></i><p id="photo-status" role="status"></p>
+ <div class="photo-actions"><button type="button" id="photo-camera"></button><button type="button" class="primary" id="photo-take" hidden></button><button type="button" id="photo-save" hidden></button><button type="button" id="photo-close"></button></div>
+</dialog></div><div class="stage-bottom"><div class="acts"><span class="active">00 序幕</span><span>01 初见</span><span>02 长夜</span><span>03 回响</span></div><span id="progress">等待开场</span></div></section>
+<section class="console"><div class="controls"><p class="eyebrow">YOUR HANDS, THEIR VOICE / 你的手，它的声音</p><h2 id="instruction">从一双手开始。</h2><p id="help">跟着舞台提示挥手、捏合和开到亮点。也可以使用鼠标。</p><div class="buttons"><button class="primary" id="start">开始故事 →</button><button id="camera">启用相机</button><button id="voice" aria-pressed="false">旁白：关</button><button id="reset">重置</button></div><p id="status" role="status">相机尚未启用 · 画面仅在本机处理</p></div><div class="gesture-guide"><div><b>✋</b><span>张开手掌<small>挥手连接 · 聚光 · 释放</small></span></div><div><b>👌</b><span>拇指与食指捏合<small>扫描岩石 · 抓取记忆</small></span></div><div><b aria-hidden="true">↔</b><span>左右移动<small>开到亮点继续</small></span></div><div class="camera-box"><video id="video" playsinline muted></video><span class="cam-live" aria-hidden="true">LIVE</span><span id="hand-status">CAMERA OFF</span><div class="meter"><i id="hold"></i></div></div></div></section>
+</div>
+<section class="intro"><div><p class="eyebrow">ABANDONED, BUT NOT FORGOTTEN</p><h1>借你的手，<em>让记忆再动一次。</em></h1><p class="description">一束光，一双手，一个留在火星上的探测者。<br>走近幕布，成为机遇号故事的操偶人。</p></div><div class="intro-side">数字皮影 × 手势叙事<span>OPPORTUNITY · MARS · 2004—2018</span></div></section>
+<details class="mission-story">
+ <summary><span><strong>机遇号的真实故事</strong><small>一趟原计划只有 90 个火星日的旅程，走了十四年多。</small></span></summary>
+ <div class="mission-story-content">
+  <section><h2>2004 · 出发</h2><p>2004 年 1 月，机遇号降落在火星。它的任务是观察岩石和土壤，寻找古代水活动的线索。在一块叫「最后机会」的岩石上，它拍下了细小的交错岩层，为曾有水流经过提供了证据。</p></section>
+  <section><h2>2018 · 最后的信号</h2><p>2018 年，一场席卷火星的沙尘暴遮住阳光，机遇号的太阳能板能获得的能量随之下降。6 月 10 日，地球收到了它的最后一次通信。团队继续尝试联络，NASA 于 2019 年 2 月 13 日宣布任务结束。</p></section>
+  <section><h2>《余影》里的 Oppy</h2><p>在我们的皮影故事里，你可以挥开石堆、带 Oppy 寻找岩石，再把它的记忆送回地球。这些相遇是虚构的。舞台上出现的火星照片来自机遇号的真实任务档案。</p></section>
+  <div class="mission-story-links"><a href="https://science.nasa.gov/mission/mer-opportunity/" target="_blank" rel="noopener">NASA 机遇号任务档案 ↗</a><a href="https://science.nasa.gov/photojournal/last-chance-evidence-of-ancient-water-flow/" target="_blank" rel="noopener">查看「最后机会」岩石的真实影像 ↗</a></div>
+ </div>
+</details>
+<footer><span>不是让它重新工作，而是让它再次被记住。</span><span>概念原型 · 非 NASA 官方项目</span></footer></main>
+<dialog id="info"><button id="close">关闭 ×</button><p class="eyebrow">BEHIND THE SHADOW</p><h2>留在远方的，仍有回响。</h2><p>《余影》把传统皮影戏的幕布、关节与操偶杆转化为数字舞台。观众的手连接一件任务已经结束的太空设备，让“记住”成为一个亲自完成的动作。</p><h3>史实与虚构</h3><p>机遇号于 2004 年登陆火星，原定主要任务为 90 个火星日，实际在火星工作超过 14 年，行驶约 45.16 公里。2018 年全球性沙尘暴期间失联，最后通信日期为 2018 年 6 月 10 日；NASA 于 2019 年 2 月 13 日宣布任务结束。</p><p>本作品的第一人称台词、记忆信物及手势“唤醒”均为艺术创作，不是真实通信，也不表示探测车被实际重启。“遗弃”是对比赛主题的情感回应，不代表任务团队停止关心它。</p><a href="https://science.nasa.gov/mission/mer-opportunity/" target="_blank" rel="noopener">NASA · Opportunity 任务档案 ↗</a><h3>操作与隐私</h3><p>1.1 记忆剧场：开场左右挥手连接；第一幕对准岩石捏合 0.4 秒扫描；第二幕张手聚光，4 秒后自然进入长夜；第三幕捏合抓取记忆，移向地球，张手释放。鼠标可完成相同任务：左右移动、按住扫描、按住聚光、拖放记忆。空格推进对白，1 / 2 / 3 跳幕。旁白使用系统语音，音效由本机合成。相机仅本机处理，不录制、不上传。所有任务为艺术演绎，不是实际重启或真实通信。</p></dialog><script type="module" src="app.js?v=20261115-rec5"></script></body></html>

@@ -1,0 +1,16 @@
+{
+  "voice": "en-US-AndrewMultilingualNeural",
+  "rate": "+10%",
+  "note": "Narration for demo-video.html. Generated with edge-tts (Microsoft neural TTS); not an actor recording.",
+  "lines": {
+    "n01": "In Malaysia, some of our oldest stories are told in shadow.",
+    "n02": "Wayang Kulit is a traditional shadow puppet theatre, and a living intangible cultural heritage. Behind a lit screen, one master puppeteer, the Tok Dalang, moves every leather puppet, and gives every character a voice.",
+    "n03": "Today, fewer young people sit in front of that screen. So we asked: what happens when a heritage art meets storytelling technology?",
+    "n04": "We kept what makes shadow play special: the screen, the puppet, and the rods. Then we handed the rods to you. With camera-based AR, your own hand, tracked live, moves the puppet, and moves the story.",
+    "n05": "Because when you play a part, the story stays with you. Our story needed a hero who was left behind.",
+    "n06": "NASA's Opportunity rover landed on Mars in 2004. It was built for ninety days, and kept exploring for more than fourteen years, until a dust storm silenced it in 2018.",
+    "n11": "Everything runs in the browser. Hand tracking happens right on your device. Nothing is recorded, and every act also works with a mouse.",
+    "n12": "Shadows Left Behind. A Malaysian heritage art, retold with technology, so that what is left behind is never forgotten.",
+    "n13": "Now, let's see it in action."
+  }
+}

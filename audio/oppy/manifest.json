@@ -1,0 +1,178 @@
+{
+  "zh": {
+    "1": [
+      {
+        "src": "audio/oppy/zh-01-00.mp3",
+        "pause": 340
+      },
+      {
+        "src": "audio/oppy/zh-01-04.mp3",
+        "pause": 340
+      }
+    ],
+    "2": [
+      {
+        "src": "audio/oppy/zh-02-hello.mp3",
+        "pause": 0
+      }
+    ],
+    "5": [
+      {
+        "src": "audio/oppy/zh-05-00.mp3",
+        "pause": 350
+      },
+      {
+        "src": "audio/oppy/zh-05-01.mp3",
+        "pause": 350
+      },
+      {
+        "src": "audio/oppy/zh-05-02.mp3",
+        "pause": 350
+      }
+    ],
+    "6": [
+      {
+        "src": "audio/oppy/zh-06-00.mp3",
+        "pause": 650
+      },
+      {
+        "src": "audio/oppy/zh-06-01.mp3",
+        "pause": 650
+      },
+      {
+        "src": "audio/oppy/zh-06-02.mp3",
+        "pause": 650
+      }
+    ],
+    "7": [
+      {
+        "src": "audio/oppy/zh-07-00.mp3",
+        "pause": 650
+      }
+    ],
+    "9": [
+      {
+        "src": "audio/oppy/zh-09-00.mp3",
+        "pause": 650
+      },
+      {
+        "src": "audio/oppy/zh-09-02.mp3",
+        "pause": 650
+      }
+    ],
+    "10": [
+      {
+        "src": "audio/oppy/zh-10-00.mp3",
+        "pause": 650
+      },
+      {
+        "src": "audio/oppy/zh-10-01.mp3",
+        "pause": 650
+      }
+    ],
+    "11": [
+      {
+        "src": "audio/oppy/zh-11-00.mp3",
+        "pause": 650
+      }
+    ],
+    "12": [
+      {
+        "src": "audio/oppy/zh-12-00.mp3",
+        "pause": 650
+      },
+      {
+        "src": "audio/oppy/zh-12-01.mp3",
+        "pause": 650
+      },
+      {
+        "src": "audio/oppy/zh-12-02.mp3",
+        "pause": 650
+      }
+    ],
+    "3": [
+      {
+        "src": "audio/oppy/zh-03-guide.mp3",
+        "pause": 0
+      }
+    ],
+    "4": [
+      {
+        "src": "audio/oppy/zh-04-guide.mp3",
+        "pause": 0
+      }
+    ]
+  },
+  "en": {
+    "1": [
+      {
+        "src": "audio/oppy/en-01-00.mp3",
+        "pause": 340
+      },
+      {
+        "src": "audio/oppy/en-01-04.mp3",
+        "pause": 340
+      }
+    ],
+    "2": [
+      {
+        "src": "audio/oppy/en-02-hello.mp3",
+        "pause": 0
+      }
+    ],
+    "5": [
+      {
+        "src": "audio/oppy/en-05-polished.mp3",
+        "pause": 0
+      }
+    ],
+    "6": [
+      {
+        "src": "audio/oppy/en-06-polished.mp3",
+        "pause": 0
+      }
+    ],
+    "7": [
+      {
+        "src": "audio/oppy/en-07-polished.mp3",
+        "pause": 0
+      }
+    ],
+    "9": [
+      {
+        "src": "audio/oppy/en-09-polished.mp3",
+        "pause": 0
+      }
+    ],
+    "10": [
+      {
+        "src": "audio/oppy/en-10-polished.mp3",
+        "pause": 0
+      }
+    ],
+    "11": [
+      {
+        "src": "audio/oppy/en-11-polished.mp3",
+        "pause": 0
+      }
+    ],
+    "12": [
+      {
+        "src": "audio/oppy/en-12-polished.mp3",
+        "pause": 0
+      }
+    ],
+    "3": [
+      {
+        "src": "audio/oppy/en-03-polished.mp3",
+        "pause": 0
+      }
+    ],
+    "4": [
+      {
+        "src": "audio/oppy/en-04-polished.mp3",
+        "pause": 0
+      }
+    ]
+  }
+}

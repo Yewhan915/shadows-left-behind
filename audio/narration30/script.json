@@ -1,0 +1,12 @@
+{
+  "voice": "en-US-AndrewMultilingualNeural",
+  "rate": "+22%",
+  "note": "Narration for demo30.html (30-second Space Apps demo). Generated with edge-tts (Microsoft neural TTS); not an actor recording.",
+  "lines": {
+    "h": "Hello. My name is Ling Yew Han. For Abandoned but not Forgotten, Malaysia's Wayang Kulit inspired Shadows Left Behind.",
+    "g1": "Your hand is tracked live in AR. Wave, and the shadow puppets move.",
+    "g2": "Pinch to scan the rocks, and real NASA images reveal Opportunity's discoveries.",
+    "g3": "Next come Voyager and the Apollo rover. Abandoned, but not forgotten.",
+    "g0": "Pick a storybook. Oppy's book opens and pulls you in."
+  }
+}

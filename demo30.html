@@ -1,0 +1,671 @@
+<!doctype html>
+<!--
+  Shadows Left Behind · 30-second Space Apps demo (auto-playing, 16:9, ≤ 30 s)
+  Opening: Wayang Kulit meets camera AR (narrated). Put ~21 s of gameplay at ./clips/demo30.mp4; it plays from 0:08 with caption strips. Press K for a clean black slot instead.
+  Keys: Space play/pause · ← → seek · H hide controls · F fullscreen · C captions · M mute. Must sit next to index.html.
+-->
+<html lang="en">
+<head><script>
+// lets the Record button capture the film's sound: anything played to the speakers is also sent to a recordable stream
+(()=>{const orig=AudioNode.prototype.connect;window.__origConnect=orig;
+AudioNode.prototype.connect=function(t,...r){const x=orig.call(this,t,...r);if(t instanceof AudioDestinationNode){const c=t.context;c.__dest=c.__dest||c.createMediaStreamDestination();orig.call(this,c.__dest)}return x}})();
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shadows Left Behind · 30-second Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#ddbc79;--ink:#ede7db;--muted:#9c9d92}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#000;color:var(--ink);font:14px/1.5 Arial,"Helvetica Neue",sans-serif;overflow:hidden}
+canvas{position:fixed;inset:0;width:100vw;height:100vh;display:block}
+body.idle{cursor:none}
+#start{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 45%,#2a2019 0%,#0b0907 70%);z-index:5;text-align:center;padding:20px}
+#start[hidden]{display:none}
+#start h1{font:400 clamp(28px,4vw,56px)/1.2 "Noto Serif",Georgia,serif;margin:0 0 8px}
+#start p{color:var(--muted);margin:0 0 26px;letter-spacing:2px;font-size:12px;text-transform:uppercase}
+#start button{font:600 16px Arial;background:linear-gradient(180deg,#ecd29c,#d4ae6a);color:#221c14;border:0;border-radius:4px;padding:14px 28px;cursor:pointer;box-shadow:0 10px 30px -8px #ddbc79aa}
+#start small{display:block;margin-top:18px;color:#6f7468;font-size:12px}
+#bar{position:fixed;left:0;right:0;bottom:0;z-index:4;padding:26px 3% 14px;background:linear-gradient(transparent,#000c);transition:opacity .4s}
+body.hide-ui #bar,body.idle #bar{opacity:0;pointer-events:none}
+#track{position:relative;height:18px;cursor:pointer}
+#track::before{content:"";position:absolute;left:0;right:0;top:8px;height:3px;background:#ffffff30;border-radius:2px}
+#fill{position:absolute;left:0;top:8px;height:3px;background:var(--gold);border-radius:2px;width:0}
+#track i{position:absolute;top:5px;width:2px;height:9px;background:#ffffffaa}
+#knob{position:absolute;top:3px;width:13px;height:13px;margin-left:-6px;border-radius:50%;background:#fff3d2;box-shadow:0 0 10px #ddbc79}
+#row{display:flex;align-items:center;gap:10px;margin-top:6px;font-size:12px;color:#d6d0c2;flex-wrap:wrap}
+#row button{background:none;border:1px solid #ffffff33;color:inherit;border-radius:3px;padding:5px 10px;font:inherit;cursor:pointer}
+#row button:hover{border-color:var(--gold)}
+#chap{flex:1;min-width:120px;color:var(--gold);letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#time{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<canvas id="film" aria-label="Shadows Left Behind narrated demo film"></canvas>
+
+<div id="start">
+  <div>
+    <h1>余影 · Shadows Left Behind</h1>
+    <p>30-second demo · NASA Space Apps 2026 · sound on</p>
+    <button id="play-start">▶ Play the demo</button>
+    <small>Space pause · ← → seek · H hide controls · F fullscreen · C captions</small>
+  </div>
+</div>
+
+<div id="bar">
+  <div id="track"><div id="fill"></div><div id="knob"></div></div>
+  <div id="row">
+    <button id="pp">❚❚</button>
+    <span id="time">0:00 / 0:00</span>
+    <span id="chap"></span>
+    <button id="cc">Captions: on</button>
+    <button id="mute">Sound: on</button>
+    <button id="ui">Hide controls (H)</button>
+    <button id="fs">⛶</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+const W=1920,H=1080,$=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),lerp=(a,b,k)=>a+(b-a)*k,ease=k=>{k=clamp(k,0,1);return k*k*(3-2*k)};
+const seg=(t,a,b)=>clamp((t-a)/(b-a),0,1);
+const win=(t,a,b,f=.5)=>Math.min(seg(t,a,a+f),1-seg(t,b-f,b));
+const rnd=n=>{const x=Math.sin(n*12.9898)*43758.5453;return x-Math.floor(x)};
+
+/* ================= timeline (30-second Space Apps demo) ================= */
+// 0:00 Wayang Kulit × camera AR (narrated) · 0:08 REAL GAMEPLAY (clips/demo30.mp4, game sound) with caption strips.
+// Must stay ≤ 30 s (Space Apps rule). Narration length from audio/narration30/durations.json.
+const SLOT_LENGTHS={DEMO:20.6};   // seconds of gameplay in the film (the clip plays at SLOTS[0].rate); total ≈ 7.8 + this
+const T=(()=>{const L={A:8,B:18,C:20,D:15,E:20,F:12},o={heritage:0,tech:22,idea:32.4,slotA:47.6};
+  o.title=o.slotA+L.A;o.story=o.title+9.4;o.prologue=o.story+15.6;o.slotB=o.prologue+6.4;
+  o.act1=o.slotB+L.B;o.slotC=o.act1+5.6;o.act2=o.slotC+L.C;o.slotD=o.act2+5.8;o.act3=o.slotD+L.D;o.slotE=o.act3+6.4;
+  o.slotF=o.slotE+L.E;o.how=o.slotF+L.F;o.end=o.how+10.6;o.dur=o.end+13.2;o.rocksFly=1e9;o.beaconOn=1e9;o.beaconReach=1e9;o.scans=[1e9,1e9,1e9];o.lightEnd=1e9;o.carry=[1e9,1e9,1e9];
+  return o})();
+const SCAN=1.2;
+const ND={h:7.49,g0:3.14,g1:4.39,g2:4.92,g3:3.84};
+const F=(()=>{const o={open:0};o.h=.3;o.slot=o.h+ND.h+.42;o.dur=o.slot+SLOT_LENGTHS.DEMO;return o})();
+const DURATION=F.dur;
+// caption strips laid over the gameplay (seconds from the start of the gameplay)
+const STRIPS=[];
+// clips/demo30.webm = the four highlights already cut and joined (made by wo/work/cut_highlights.cjs from the recording).
+const SLOTS=[{id:'DEMO',t:F.slot,file:'clips/demo30.webm',rate:1.35,title:'Live demo',sub:'About 21 seconds of play',
+  shows:['0–5 s   choose Oppy’s book: it floats, opens, draws you in','5–10 s   wave → rocks fly, Oppy wakes','10–15 s   pinch to scan a rock → stars burst, NASA photo appears','15–21 s   carry a memory to the paper Earth']}];
+// where in the video to be at `rel` seconds into the slot
+function slotLocal(slot,rel){if(!slot.segments)return rel*(slot.rate||1)+(slot.from||0);let a=0;for(const [f,l] of slot.segments){if(rel<a+l)return f+(rel-a);a+=l}const z=slot.segments[slot.segments.length-1];return z[0]+z[1]}
+const SEG_CUTS=(()=>{let a=0;return (SLOTS[0].segments||[]).slice(0,-1).map(([,l])=>F.slot+(a+=l))})();
+const CHAPTERS=[{t:F.open,name:'Wayang Kulit × camera AR'},{t:F.slot,name:'LIVE DEMO (your clip)'}];
+const VOICE=[
+ {t:F.h,who:'n',src:'audio/narration30/h.mp3',d:ND.h,text:"Hello. My name is Ling Yew Han (team cina). For Abandoned but not Forgotten, Malaysia's Wayang Kulit inspired Shadows Left Behind."},
+ {t:F.slot+.15,who:'n',src:'audio/narration30/g0.mp3',d:ND.g0,text:"Pick a storybook. Oppy's book opens and pulls you in."},
+ {t:F.slot+3.5,who:'n',src:'audio/narration30/g1.mp3',d:ND.g1,text:"Your hand is tracked live in AR. Wave, and the shadow puppets move."},
+ {t:F.slot+8.2,who:'n',src:'audio/narration30/g2.mp3',d:ND.g2,text:"Pinch to scan the rocks, and real NASA images reveal Opportunity's discoveries."},
+ {t:F.slot+14.6,who:'n',src:'audio/narration30/g3.mp3',d:ND.g3,text:"Next come Voyager and the Apollo rover. Abandoned, but not forgotten."}];
+const BURSTS=[];
+const BELLS=(()=>{const scale=[293.7,329.6,392,440,523.3,587.3],pat=[0,2,3,2,4,3,1,2,0,3,4,5],out=[];let t=.2,i=0;while(t<4.2){out.push({t,f:scale[pat[i%pat.length]],soft:i%2===1});t+=.6;i++}return out})();
+
+/* ================= canvas ================= */
+const cv=$('#film'),c=cv.getContext('2d');let VW=0,VH=0,DPR=1;
+function resize(){DPR=Math.min(devicePixelRatio||1,2);VW=innerWidth;VH=innerHeight;cv.width=Math.round(VW*DPR);cv.height=Math.round(VH*DPR)}
+addEventListener('resize',resize);resize();
+const IMG={};for(const [k,f] of [['rock','last-chance-rock.jpg'],['shadow','opportunity-shadow.jpg'],['last','opportunity-last-message.jpg']]){const im=new Image();im.src='assets/nasa/'+f;IMG[k]=im}
+
+/* ================= primitives ================= */
+function P(pts,fill){c.fillStyle=fill;c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.fill()}
+function L(a,b,w,col){c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(b[0],b[1]);c.lineWidth=w;c.strokeStyle=col;c.lineCap='round';c.stroke()}
+function C(x,y,r,col){c.beginPath();c.arc(x,y,Math.max(0,r),0,Math.PI*2);c.fillStyle=col;c.fill()}
+function glow(x,y,r,rgb,a){if(r<=0||a<=0)return;const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(${rgb},${a})`);g.addColorStop(.3,`rgba(${rgb},${a*.55})`);g.addColorStop(1,`rgba(${rgb},0)`);c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2)}
+function text(s,x,y,{size=40,color='#ede7db',align='left',font='serif',weight=400,alpha=1,spacing=0,italic=false,shadow=true}={}){
+  if(alpha<=0)return;c.save();c.globalAlpha=alpha;c.textAlign=align;c.textBaseline='alphabetic';
+  c.font=`${italic?'italic ':''}${weight} ${size}px ${font==='serif'?'"Noto Serif",Georgia,serif':'Arial,"Helvetica Neue",sans-serif'}`;
+  if('letterSpacing' in c)c.letterSpacing=spacing+'px';if(shadow){c.shadowColor='rgba(0,0,0,.55)';c.shadowBlur=18}
+  c.fillStyle=color;c.fillText(s,x,y);c.restore()}
+function wrap(s,maxW,size,font='serif',weight=400){c.save();c.font=`${weight} ${size}px ${font==='serif'?'"Noto Serif",Georgia,serif':'Arial'}`;const words=s.split(' '),lines=[];let cur='';
+  for(const w of words){const test=cur?cur+' '+w:w;if(c.measureText(test).width>maxW&&cur){lines.push(cur);cur=w}else cur=test}if(cur)lines.push(cur);c.restore();return lines}
+function eyebrow(s,x,y,a,align='left'){text(s,x,y,{size:22,font:'sans',weight:700,color:'#ddbc79',spacing:7,alpha:a,align})}
+
+const PAL=[
+ ['#f0d7a2','#d7b17a','#997248','#8b674238','#74533844','#e4c48b'],
+ ['#f4c397','#cf8d64','#8b5142','#a24e3d64','#713b3061','#f1ce99'],
+ ['#b8a48a','#8e7a6a','#65544f','#5b555773','#4a3d406e','#b8aa99'],
+ ['#c5d6cc','#8ea9a2','#586f76','#3a596660','#334b566d','#d2e4cf']
+];
+const GY=H*.8;
+function backdrop(pal,t,o={}){
+  const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,pal[0]);g.addColorStop(1,pal[1]);c.fillStyle=g;c.fillRect(0,0,W,H);
+  if(o.stars){for(let i=0;i<160;i++){const a=.25+.55*Math.abs(Math.sin(t*1.1+i));c.fillStyle=`rgba(255,250,235,${a})`;const sz=i%7?1.8:3;c.fillRect((i*97.3)%W,(i*53.7)%(H*.6),sz,sz)}}
+  if(o.sun!==false){const sx=W*(o.sunX??.78),sy=H*.24,R=H*.075;glow(sx,sy,R*5,'255,242,205',.6);C(sx,sy,R,pal[5])}
+  const k=H/500;
+  [[.6,pal[3],.12,34],[.7,pal[4],.2,24],[.8,pal[2],.3,14]].forEach(([y,col,sp,amp],n)=>{
+    c.beginPath();c.moveTo(0,H);for(let i=0;i<=60;i++){const x=W*i/60;c.lineTo(x,H*y+Math.sin(i/60*6+n*2.1+t*sp)*amp*k+Math.sin(i/60*17+n)*amp*.28*k)}c.lineTo(W,H);c.closePath();c.fillStyle=col;c.fill()});
+  c.strokeStyle='rgba(255,232,195,.13)';c.lineWidth=1.5;
+  for(let i=0;i<5;i++){c.beginPath();for(let j=0;j<=40;j++){const x=W*j/40,y=H*(.85+i*.032)+Math.sin(j/40*8+i)*3*k;j?c.lineTo(x,y):c.moveTo(x,y)}c.stroke()}
+  c.fillStyle='rgba(255,246,225,.35)';for(let i=0;i<60;i++)c.fillRect((i*137.5+t*12*(1+i%3))%W,(i*71.3)%(H*.75),2.2,2.2);
+}
+function vignette(a=.45){const v=c.createRadialGradient(W/2,H*.48,H*.35,W/2,H/2,Math.hypot(W,H)*.58);v.addColorStop(0,'rgba(20,12,8,0)');v.addColorStop(1,`rgba(20,12,8,${a})`);c.fillStyle=v;c.fillRect(0,0,W,H)}
+function orbs(t,tint,n=5,pull=W/2){for(let i=0;i<n;i++){let px=W*(.12+.76*(.5+.5*Math.sin(t*.11*(1+i*.23)+i*1.9)));const py=H*(.12+.26*(.5+.5*Math.sin(t*.17*(1+i*.31)+i*2.7)));px+=(pull-px)*.12;
+  const pulse=.75+.25*Math.sin(t*2.4+i*1.3),core=26*(1+(i%3)*.25);c.save();c.globalCompositeOperation='screen';glow(px,py,core*3.2,tint,.22*pulse);glow(px,py,core*1.1,tint,.6*pulse);c.restore();C(px,py,4,`rgba(255,250,235,${.8*pulse})`)}}
+
+/* Opportunity as a jointed shadow puppet (same construction as the game) */
+function rover(t,px,py,s,o={}){
+  const ink=o.ink||'#35291f',gold=o.gold||'#b98b4d',sil=!!o.silhouette;
+  c.save();c.translate(px,py);c.scale(s,s);c.translate(0,Math.sin(t*1.4)*2);
+  if(o.rods!==false){L([-52,14],[-120,360],2,o.rodColor||'#59432b88');L([31,-48],[90,360],2,o.rodColor||'#59432b88')}
+  P([[-92,-15],[65,-15],[96,12],[62,38],[-67,38],[-98,10]],ink);P([[-86,-24],[-9,-48],[83,-22],[15,5]],ink);
+  if(!sil){for(let i=0;i<5;i++)L([-70+i*28,-23-i],[i*22-5,-2-i*2],1,gold);
+    for(let k=0;k<4;k++){const f=k*27;P([[-76+f,-22],[-54+f,-26],[-36+f,-17],[-58+f,-12]],'#55443c');L([-72+f,-21],[-54+f,-15],.75,'#d5a569')}
+    L([-86,11],[58,28],1.6,'#c79557');for(let r=0;r<5;r++)C(-65+r*25,15+r*2,2,'#e0ab69')}
+  L([2,-21],[2,-102],9,ink);L([2,-78],[25,-99],5,ink);P([[-26,-119],[31,-119],[38,-89],[-25,-89]],ink);
+  const eye=sil?ink:gold;C(-12,-104,7,eye);C(19,-104,7,eye);if(!sil){const p=o.glow?'#ffe9a1':ink;C(-12,-104,3,p);C(19,-104,3,p)}
+  L([50,-24],[61,-66],3,ink);c.beginPath();c.ellipse(61,-70,17,6,-.35,0,Math.PI*2);c.fillStyle=ink;c.fill();L([61,-70],[69,-83],2,ink);
+  for(let i=0;i<3;i++){const wx=-70+i*70;L([wx*.75,23],[wx,49],6,ink);C(wx,53,20,ink);
+    if(!sil){C(wx,53,12,gold);C(wx,53,6,ink);for(let j=0;j<6;j++){const a=j*Math.PI/3+(o.spin??t*.3);L([wx+Math.cos(a)*7,53+Math.sin(a)*7],[wx+Math.cos(a)*16,53+Math.sin(a)*16],2,ink)}}}
+  const armY=o.wave?-50+Math.sin(t*9)*25:4+Math.sin(t*2)*10;L([64,22],[110,armY],6,ink);C(63,22,5,sil?ink:gold);C(110,armY,5,ink);
+  c.restore()}
+const hop=(t,times)=>{for(const h of times){const k=(t-h)/.65;if(k>=0&&k<=1)return Math.sin(k*Math.PI)*34*(1-k*.3)}return 0};
+function shadowUnder(x,s){c.fillStyle='rgba(60,40,24,.22)';c.beginPath();c.ellipse(x,GY+8*s,120*s,13*s,0,0,Math.PI*2);c.fill()}
+function cue(emoji,x,y,size,alpha=.85,rot=0){if(alpha<=0)return;c.save();c.globalAlpha=alpha;c.translate(x,y);c.rotate(rot);c.font=`${size}px "Segoe UI Emoji","Apple Color Emoji",sans-serif`;c.textAlign='center';c.textBaseline='middle';
+  c.filter='brightness(0) invert(1) drop-shadow(0 3px 6px rgba(40,26,19,.6))';c.fillText(emoji,0,0);c.filter='none';c.restore()}
+
+/* ---------- Wayang Kulit motifs (original drawings in the traditional style) ---------- */
+// the lit screen (kelir) in a carved frame, lit from behind by an oil lamp
+function kelir(x,y,w,h,t,lampX=.5,lit=1){
+  c.fillStyle='#2a1a10';c.fillRect(x-26,y-26,w+52,h+52);
+  c.strokeStyle='#8a5a2f';c.lineWidth=3;c.strokeRect(x-16,y-16,w+32,h+32);
+  for(let i=0;i<Math.floor((w+32)/34);i++){P([[x-16+i*34+17,y-24],[x-16+i*34+26,y-16],[x-16+i*34+17,y-8],[x-16+i*34+8,y-16]],'#a8733e');P([[x-16+i*34+17,y+h+8],[x-16+i*34+26,y+h+16],[x-16+i*34+17,y+h+24],[x-16+i*34+8,y+h+16]],'#a8733e')}
+  const fl=1+.04*Math.sin(t*13)+.03*Math.sin(t*7.3),lx=x+w*lampX,ly=y+h*.55;
+  const g=c.createRadialGradient(lx,ly,10,lx,ly,Math.max(w,h)*.75*fl);g.addColorStop(0,`rgba(255,236,190,${lit})`);g.addColorStop(.45,`rgba(236,196,128,${lit})`);g.addColorStop(1,`rgba(120,74,36,${lit})`);
+  c.fillStyle='#3a2414';c.fillRect(x,y,w,h);c.fillStyle=g;c.fillRect(x,y,w,h);
+  c.strokeStyle='rgba(120,80,40,.08)';c.lineWidth=1;for(let i=0;i<h;i+=6){c.beginPath();c.moveTo(x,y+i);c.lineTo(x+w,y+i);c.stroke()}
+}
+function holes(pts,r,col){for(const [px,py] of pts)C(px,py,r,col)}
+// a leaf-shaped opening puppet (pohon beringin style): pointed top, perforated tree pattern
+function leafPuppet(x,y,s,rot,col='#1c130c',holeCol='rgba(250,222,160,.85)'){
+  c.save();c.translate(x,y);c.rotate(rot);c.scale(s,s);
+  L([0,110],[0,330],4,col);
+  c.beginPath();c.moveTo(0,-230);c.quadraticCurveTo(70,-150,88,-40);c.quadraticCurveTo(96,60,40,104);c.lineTo(0,118);c.lineTo(-40,104);c.quadraticCurveTo(-96,60,-88,-40);c.quadraticCurveTo(-70,-150,0,-230);c.closePath();c.fillStyle=col;c.fill();
+  c.strokeStyle=holeCol;c.lineWidth=3;c.lineCap='round';
+  c.beginPath();c.moveTo(0,100);c.lineTo(0,-170);c.stroke();
+  for(let i=0;i<6;i++){const yy=60-i*40,sp=58-i*7;c.beginPath();c.moveTo(0,yy);c.quadraticCurveTo(sp*.5,yy-18,sp,yy-36);c.moveTo(0,yy);c.quadraticCurveTo(-sp*.5,yy-18,-sp,yy-36);c.stroke()}
+  const dots=[];for(let i=0;i<7;i++)for(let j=-2;j<=2;j++){const yy=-150+i*36,xx=j*22+(i%2?11:0);if(Math.abs(xx)<70-Math.abs(yy+40)*.12&&Math.abs(j)>0)dots.push([xx,yy])}holes(dots,3.2,holeCol);
+  c.beginPath();c.moveTo(-44,96);c.lineTo(44,96);c.stroke();
+  c.restore()}
+// a jointed wayang figure in profile; arm angles animate, rods run off the bottom
+function wayangFigure(x,y,s,t,o={}){
+  const col=o.col||'#1c130c',hole=o.hole||'rgba(250,222,160,.85)',sw=o.swing??Math.sin(t*1.7)*.35;
+  c.save();c.translate(x,y);c.scale(s,s);
+  L([0,150],[0,360],4,col);
+  // back arm
+  const bs=[-12,-82],be=[-40+Math.sin(sw)*10,-30],bh=[-22+Math.sin(sw)*24,22];
+  L(bs,be,9,col);L(be,bh,7,col);C(be[0],be[1],5,col);P([[bh[0]-6,bh[1]],[bh[0]+10,bh[1]+4],[bh[0]+4,bh[1]+14]],col);L(bh,[-90,360],2.5,col+'cc');
+  // kain (lower garment) and body
+  P([[-44,152],[40,152],[30,40],[16,-22],[-16,-22],[-30,40]],col);
+  P([[-17,-22],[17,-22],[21,-92],[-19,-92]],col);
+  // head in profile with long nose and crown
+  P([[-15,-92],[15,-94],[34,-110],[16,-116],[18,-134],[-12,-140],[-20,-110]],col);
+  P([[-18,-136],[18,-136],[13,-178],[5,-152],[-3,-190],[-9,-152],[-15,-170]],col);
+  P([[-22,-118],[-44,-96],[-36,-80],[-18,-100]],col);// hair knot
+  // front arm on its rod
+  const fs=[14,-82],fe=[44+Math.sin(sw)*8,-40-Math.cos(sw)*14],fh=[80+Math.sin(sw*1.3)*28,-70+Math.sin(sw)*30];
+  L(fs,fe,9,col);L(fe,fh,7,col);C(fe[0],fe[1],5,col);P([[fh[0]-4,fh[1]-8],[fh[0]+16,fh[1]-2],[fh[0]+2,fh[1]+8]],col);L(fh,[110,360],2.5,col+'cc');
+  // perforations
+  const d=[];for(let i=0;i<5;i++)for(let j=-2;j<=2;j++)d.push([j*13+(i%2?6:0),60+i*20]);holes(d,2.6,hole);
+  holes([[0,-40],[-6,-60],[6,-60],[0,-78],[-4,-150],[4,-165],[2,-122]],2.4,hole);
+  c.strokeStyle=hole;c.lineWidth=2;c.beginPath();c.moveTo(-36,140);c.lineTo(34,140);c.moveTo(-26,40);c.lineTo(26,40);c.stroke();
+  c.restore()}
+// the same figure as a digital wireframe (for the technology chapter)
+function wayangWire(x,y,s,t,a){if(a<=0)return;c.save();c.globalAlpha=a;c.translate(x,y);c.scale(s,s);c.strokeStyle='#8fe0f0';c.lineWidth=2;c.lineJoin='round';
+  const shape=[[-44,152],[40,152],[30,40],[16,-22],[21,-92],[15,-94],[34,-110],[16,-116],[18,-134],[13,-178],[5,-152],[-3,-190],[-9,-152],[-15,-170],[-18,-136],[-20,-110],[-19,-92],[-16,-22],[-30,40]];
+  c.beginPath();shape.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.stroke();
+  const sw=Math.sin(t*1.7)*.35,joints=[[14,-82],[44+Math.sin(sw)*8,-40-Math.cos(sw)*14],[80+Math.sin(sw*1.3)*28,-70+Math.sin(sw)*30],[-12,-82],[-40+Math.sin(sw)*10,-30],[-22+Math.sin(sw)*24,22]];
+  L(joints[0],joints[1],2,'#8fe0f0');L(joints[1],joints[2],2,'#8fe0f0');L(joints[3],joints[4],2,'#8fe0f0');L(joints[4],joints[5],2,'#8fe0f0');
+  joints.forEach(p=>{C(p[0],p[1],6,'#0d2a30');c.beginPath();c.arc(p[0],p[1],6,0,Math.PI*2);c.stroke()});
+  c.restore()}
+
+/* Act I rock, Earth and memory keepsakes (same designs as the game) */
+function rock(rx,ry,i,done,t,sc=1.6){c.save();c.translate(rx,ry);c.scale(sc,sc);
+  c.fillStyle='rgba(40,24,14,.28)';c.beginPath();c.ellipse(0,14,38,7,0,0,Math.PI*2);c.fill();
+  if(done)glow(0,-4,62,'142,234,255',.38);
+  const v=[[-2,1],[2,-2],[0,2]][i];
+  P([[-25,12],[-31+v[0],-8],[-8,-25+v[1]],[22,-16],[31,12]],done?'#4f6f6c':'#5e4330');
+  P([[-31+v[0],-8],[-8,-25+v[1]],[22,-16],[6,-5],[-17,-2]],done?'#6f9993':'#86613f');
+  P([[22,-16],[31,12],[8,12],[6,-5]],done?'#3d5654':'#4a3424');
+  for(let s=0;s<3;s++)L([-26,1+s*4],[27,-3+s*5],1,done?'rgba(201,246,255,.35)':'rgba(190,150,105,.45)');
+  L([-31+v[0],-8],[-8,-25+v[1]],1.6,done?'rgba(220,250,255,.8)':'rgba(230,186,130,.85)');
+  if(done){for(const [wd,col] of [[5,'rgba(142,234,255,.35)'],[2,'#c9f6ff']]){c.lineWidth=wd;c.strokeStyle=col;for(let row=0;row<3;row++){c.beginPath();for(let o=-21;o<=21;o++){const yy=-11+row*8+Math.sin(o*.25-t*7+row)*2;o===-21?c.moveTo(o,yy):c.lineTo(o,yy)}c.stroke()}}}
+  C(0,32,10,done?'#2f8f9d':'#2a1d15d9');c.fillStyle=done?'#fff':'#f6e2b8';c.font='bold 11px Arial';c.textAlign='center';c.textBaseline='middle';c.fillText(done?'✓':String(i+1),0,32.5);
+  c.restore()}
+function scanRing(x,y,p,t){if(p<=0||p>=1)return;glow(x,y,90,'252,240,194',.3);c.save();c.lineCap='round';c.strokeStyle='rgba(252,240,194,.4)';c.lineWidth=2;c.setLineDash([6,10]);c.lineDashOffset=-t*50;c.beginPath();c.arc(x,y,72,0,Math.PI*2);c.stroke();c.setLineDash([]);
+  c.strokeStyle='#fcf0c2';c.lineWidth=6;c.beginPath();c.arc(x,y,60,-Math.PI/2,-Math.PI/2+Math.PI*2*p);c.stroke();c.restore()}
+const EARTH_LAND=[[[-.55,-.55],[-.2,-.62],[-.05,-.38],[-.22,-.18],[-.12,.05],[-.38,.12],[-.5,-.12],[-.68,-.25]],[[.15,-.2],[.42,-.3],[.55,-.05],[.4,.25],[.22,.55],[.08,.3],[.12,.02]],[[-.45,.4],[-.15,.35],[-.05,.55],[-.3,.68]]];
+function earth(cx,cy,R,t,lit=0,ring=true){
+  glow(cx,cy,R*2,'236,244,226',.26+lit*.3);
+  c.save();L([cx+R*.15,cy+R*.95],[cx+R*1.1,cy+R*7],2,'#3a4a4a66');C(cx+R*.15,cy+R*.95,3.5,'#c9a46a');
+  c.beginPath();c.arc(cx,cy,R,0,Math.PI*2);c.clip();c.fillStyle='#35667c';c.fillRect(cx-R,cy-R,R*2,R*2);C(cx-R*.12,cy-R*.12,R*.92,'#5d9ab0');
+  const span=R*2.6,sh=(t*R*.12)%span;for(const cp of [-span,0,span])for(const sp of EARTH_LAND)P(sp.map(([x,y])=>[cx+x*R+sh+cp,cy+y*R]),'#b5c99a');
+  const cs=(t*R*.2)%span;for(const cp of [-span,0,span])for(const [ox,oy,len] of [[-.7,-.75,.55],[.05,-.42,.5],[-.35,.2,.45],[.3,.72,.5]]){const x0=cx+ox*R+cs+cp,y0=cy+oy*R;P([[x0,y0],[x0+len*R*.3,y0-R*.07],[x0+len*R,y0-R*.03],[x0+len*R*.85,y0+R*.05],[x0+len*R*.15,y0+R*.05]],'rgba(243,236,218,.85)')}
+  P([[cx+R*.35,cy-R],[cx+R,cy-R],[cx+R,cy+R],[cx-R*.2,cy+R],[cx+R*.55,cy+R*.25]],'rgba(28,48,62,.32)');c.restore();
+  c.save();c.strokeStyle='#2b2620';c.lineWidth=3.5;c.beginPath();c.arc(cx,cy,R,0,Math.PI*2);c.stroke();c.strokeStyle='rgba(233,207,152,.85)';c.lineWidth=1.5;c.beginPath();c.arc(cx,cy,R+4,0,Math.PI*2);c.stroke();
+  if(ring){c.strokeStyle=`rgba(251,226,170,${.55+lit*.4})`;c.lineWidth=2;c.setLineDash([9,12]);c.lineDashOffset=-t*20;c.beginPath();c.arc(cx,cy,R*1.5,0,Math.PI*2);c.stroke();c.setLineDash([])}
+  c.restore()}
+const MEM_TINTS=['255,214,120','255,176,110','255,160,170'],MEM_NAMES=['Explore','Persist','Meet'];
+function memIcon(mx,my,i,t,s){const ink='#2b2620';c.save();c.translate(mx,my);c.scale(s,s);c.rotate(Math.sin(t*1.8+i)*.08);c.lineJoin='round';c.lineCap='round';
+  if(i===0){const rk=[[-15,8],[-17,-3],[-6,-13],[10,-10],[17,1],[13,9]];c.beginPath();rk.forEach(([x,y],k)=>k?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.lineWidth=4;c.strokeStyle=ink;c.stroke();c.fillStyle='#c79a68';c.fill();
+    P([[-17,-3],[-6,-13],[10,-10],[2,-4],[-9,-2]],'#e0b884');for(let r=0;r<2;r++){c.beginPath();for(let k=-11;k<=12;k++){const yy=1+r*4+Math.sin(k*.45-t*6+r)*1.2;k===-11?c.moveTo(k,yy):c.lineTo(k,yy)}c.lineWidth=1.8;c.strokeStyle='#7fe0f5';c.stroke()}}
+  else if(i===1){c.rotate(t*.6);c.beginPath();for(let k=0;k<16;k++){const a=k*Math.PI/8,r=k%2?9:17;k?c.lineTo(Math.cos(a)*r,Math.sin(a)*r):c.moveTo(Math.cos(a)*r,Math.sin(a)*r)}c.closePath();c.lineWidth=3.5;c.strokeStyle=ink;c.stroke();c.fillStyle='#f3b25e';c.fill();
+    c.beginPath();c.arc(0,0,8,0,Math.PI*2);c.fillStyle='#ffe3a3';c.fill();c.lineWidth=1.5;c.stroke();C(-2.5,-2.5,2.2,'#fff7e2')}
+  else{const f=[[-7,-4,-10,-15],[-2,-6,-3,-18],[3,-6,4,-18],[8,-4,10,-14]];for(const [wd,col] of [[7.5,ink],[4.5,'#ffd9cf']]){c.strokeStyle=col;c.lineWidth=wd;for(const [a,b,d,e] of f){c.beginPath();c.moveTo(a,b);c.lineTo(d,e);c.stroke()}
+      c.beginPath();c.moveTo(-8,4);c.lineTo(-16,-3);c.stroke();c.beginPath();c.ellipse(0,3,wd===7.5?11.5:10,wd===7.5?10.5:9,0,0,Math.PI*2);c.fillStyle=col;c.fill()}
+    c.fillStyle='#f28b9a';c.beginPath();c.moveTo(0,8);c.bezierCurveTo(-6,3,-4,-2,0,1);c.bezierCurveTo(4,-2,6,3,0,8);c.fill()}
+  c.restore()}
+function memLabel(x,y,s,a=1){const wd=s.length*11+28;c.save();c.globalAlpha=a;c.fillStyle='rgba(42,29,21,.85)';c.beginPath();c.roundRect?c.roundRect(x-wd/2,y,wd,30,15):c.rect(x-wd/2,y,wd,30);c.fill();
+  c.font='bold 17px Arial';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fff1cf';c.fillText(s,x,y+16);c.restore()}
+
+/* hand landmarks (21 points), open ↔ pinch */
+const HAND_OPEN=[[.5,.9],[.38,.82],[.3,.72],[.24,.63],[.19,.55],[.42,.58],[.4,.42],[.39,.32],[.38,.23],[.5,.56],[.5,.38],[.5,.27],[.5,.17],[.58,.58],[.6,.42],[.61,.32],[.62,.24],[.65,.62],[.7,.5],[.73,.42],[.75,.35]];
+const HAND_PINCH=HAND_OPEN.map(p=>p.slice());[[2,[.33,.72]],[3,[.33,.6]],[4,[.36,.49]],[6,[.41,.46]],[7,[.38,.43]],[8,[.365,.485]]].forEach(([i,v])=>HAND_PINCH[i]=v);
+const BONES=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
+function handSkeleton(ox,oy,S,k,a,col='#ddbc79aa'){if(a<=0)return;const kk=ease(k);const pts=HAND_OPEN.map((p,i)=>[ox+lerp(p[0],HAND_PINCH[i][0],kk)*S,oy+lerp(p[1],HAND_PINCH[i][1],kk)*S]);
+  c.save();c.globalAlpha=a;BONES.forEach(([p,q])=>L(pts[p],pts[q],Math.max(2,S/150),col));pts.forEach((q,i)=>C(q[0],q[1],(i===4||i===8?1.6:1.1)*Math.max(4,S/90),i===4||i===8?'#8fd0e0':'#ede7db'));c.restore();return pts}
+
+/* glowing star bursts, deterministic */
+function star(r){c.beginPath();for(let k=0;k<10;k++){const a=-Math.PI/2+k*Math.PI/5,rr=k%2?r*.45:r;k?c.lineTo(Math.cos(a)*rr,Math.sin(a)*rr):c.moveTo(Math.cos(a)*rr,Math.sin(a)*rr)}c.closePath()}
+function bursts(t){BURSTS.forEach((b,bi)=>{const age=t-b.t,life=b.big?1.6:1.2;if(age<0||age>life)return;const ox=b.x*W,oy=b.y*H,fade=1-age/life,n=b.big?34:18;
+  c.save();c.strokeStyle=`rgba(255,244,210,${.7*fade})`;c.lineWidth=4*fade+1.5;c.beginPath();c.arc(ox,oy,30+age*(b.big?330:230),0,Math.PI*2);c.stroke();
+  if(age<.25)glow(ox,oy,120*(1-age*2),'255,240,200',.6*(1-age*4));
+  for(let k=0;k<n;k++){const r1=rnd(bi*97+k),r2=rnd(bi*31+k*7),a=-Math.PI/2+(r1-.5)*Math.PI*1.7,sp=(b.big?430:320)*(.55+r2*.6),size=(b.big?15:12)*(.6+rnd(k*13+bi)*.7);
+    const px=ox+Math.cos(a)*sp*age,py=oy+Math.sin(a)*sp*age+430*age*age,shine=Math.min(1,fade*1.4)*(.75+.25*Math.sin(age*18+k));
+    glow(px,py,size*3.2,'255,226,140',.55*shine);c.save();c.translate(px,py);c.rotate((r1-.5)*4*age);c.globalAlpha=shine;star(size);c.fillStyle='#ffe9a8';c.fill();star(size*.45);c.fillStyle='#fffbea';c.fill();c.restore()}
+  c.restore()})}
+
+/* chapter tag, captions, fades */
+function tag(label,t,a,b){const al=win(t,a,b,.6);if(al<=0)return;c.save();c.globalAlpha=al;c.font='600 22px Arial';if('letterSpacing' in c)c.letterSpacing='3px';const w=c.measureText(label).width+44;
+  c.fillStyle='rgba(36,28,24,.86)';c.beginPath();c.roundRect?c.roundRect(70,64,w,48,8):c.rect(70,64,w,48);c.fill();c.strokeStyle='rgba(240,212,154,.35)';c.lineWidth=1.5;c.stroke();c.fillStyle='#f9e5bc';c.textBaseline='middle';c.fillText(label,92,89);c.restore()}
+let captionsOn=true;
+function captions(t){if(!captionsOn)return;for(const v of VOICE){const al=win(t,v.t-.1,v.t+v.d+.4,.35);if(al<=0)continue;
+  const oppy=v.who==='o',size=oppy?40:34,lines=wrap(v.text,oppy?1300:1400,size,'serif',oppy?600:400),lh=size*1.38,top=H-64-lines.length*lh;
+  c.save();c.globalAlpha=al;const g=c.createLinearGradient(0,top-70,0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.55)');c.fillStyle=g;c.fillRect(0,top-70,W,H-top+70);
+  if(oppy)text('OPPY',W/2,top-12,{size:20,font:'sans',weight:700,color:'#ffe0a8',align:'center',spacing:6});
+  lines.forEach((ln,i)=>text(ln,W/2,top+size*.9+i*lh,{size,align:'center',color:oppy?'#fff8ec':'#ece6da',weight:oppy?600:400,italic:!oppy}));c.restore()}}
+function blackFade(a){if(a<=0)return;c.fillStyle=`rgba(0,0,0,${a})`;c.fillRect(0,0,W,H)}
+
+/* ================= scenes ================= */
+function sHeritage(t){
+  c.fillStyle='#0b0806';c.fillRect(0,0,W,H);glow(W/2,H*.5,1100,'200,120,50',.12);
+  const sx=W*.2,sy=200,sw=W*.6,sh=H*.55;kelir(sx,sy,sw,sh,t,.5,ease(seg(t,.1,1.4)));
+  c.save();c.beginPath();c.rect(sx,sy,sw,sh);c.clip();
+  // opening leaf puppet sweeps across, twirls, then leaves; the figure enters
+  const lp=seg(t,.6,7.5),lx=lerp(sx-200,sx+sw+220,ease(lp)),lrot=Math.sin(lp*Math.PI*2)*.25;
+  if(lp>0&&lp<1){c.filter=`blur(${(1.5+Math.abs(Math.sin(lp*Math.PI*3))*2).toFixed(1)}px)`;leafPuppet(lx,sy+sh*.48,1.15,lrot);c.filter='none'}
+  const fIn=ease(seg(t,7,9.5)),fx=lerp(sx-160,sx+sw*.42,fIn);
+  if(t>7){c.filter='blur(1.2px)';wayangFigure(fx,sy+sh*.52,1.45,t);c.filter='none'}
+  if(t>11){const f2=ease(seg(t,11,13.2));c.save();c.translate(sx+sw*.72,0);c.scale(-1,1);c.filter='blur(1.6px)';wayangFigure(lerp(-sw*.5,0,f2),sy+sh*.55,1.3,t+1.3,{swing:Math.sin(t*1.3+1)*.4});c.filter='none';c.restore()}
+  c.restore();
+  // the lamp (pelita) glow at the bottom of the screen
+  const fl=.9+.1*Math.sin(t*11);glow(W/2,sy+sh+10,240*fl,'255,190,90',.35);C(W/2,sy+sh+18,7,'#ffd27a');
+  eyebrow('MALAYSIA  ·  WAYANG KULIT',W/2,70,win(t,1,22,.8),'center');
+  text('Stories told in shadow',W/2,146,{size:50,align:'center',alpha:win(t,1.6,8,.8)});
+  text('A living intangible cultural heritage',W/2,146,{size:46,align:'center',color:'#e6c788',alpha:win(t,8.6,15,.7)});
+  text('One Tok Dalang · every puppet · every voice',W/2,146,{size:46,align:'center',italic:true,alpha:win(t,15.4,22,.7)});
+}
+function sTech(t){
+  c.fillStyle='#0b0d0e';c.fillRect(0,0,W,H);
+  const sx=W*.2,sy=200,sw=W*.6,sh=H*.55,scan=lerp(sx-10,sx+sw+10,ease(seg(t,24.2,29.5)));
+  kelir(sx,sy,sw,sh,t,.5);
+  c.save();c.beginPath();c.rect(sx,sy,sw,sh);c.clip();c.filter='blur(1.2px)';wayangFigure(sx+sw*.5,sy+sh*.54,1.45,t);c.filter='none';c.restore();
+  // the digital half: everything left of the scan line becomes data
+  c.save();c.beginPath();c.rect(sx,sy,Math.max(0,scan-sx),sh);c.clip();c.fillStyle='#071419';c.fillRect(sx,sy,sw,sh);
+  c.strokeStyle='rgba(143,224,240,.12)';c.lineWidth=1;for(let x=sx;x<sx+sw;x+=40){c.beginPath();c.moveTo(x,sy);c.lineTo(x,sy+sh);c.stroke()}for(let y=sy;y<sy+sh;y+=40){c.beginPath();c.moveTo(sx,y);c.lineTo(sx+sw,y);c.stroke()}
+  wayangWire(sx+sw*.5,sy+sh*.54,1.45,t,1);
+  for(let i=0;i<40;i++){const px=sx+rnd(i)*sw,py=sy+((rnd(i+50)*sh+t*60*(.5+rnd(i+9)))%sh);C(px,py,2,'rgba(143,224,240,.5)')}
+  c.restore();
+  if(scan>sx&&scan<sx+sw){L([scan,sy],[scan,sy+sh],3,'#bff3ff');glow(scan,sy+sh/2,220,'143,224,240',.25)}
+  eyebrow('HERITAGE  ×  STORYTELLING TECHNOLOGY',W/2,70,win(t,22.3,32.4,.6),'center');
+  text('What if a heritage art met storytelling technology?',W/2,146,{size:46,align:'center',alpha:win(t,23,32.4,.7)});
+}
+function sIdea(t){const k=t-T.idea;
+  c.fillStyle='#0b0d0c';c.fillRect(0,0,W,H);
+  const sx=W*.4,sy=150,sw=W*.54,sh=H-330;
+  const g=c.createRadialGradient(sx+sw*.5,sy+sh*.45,10,sx+sw*.5,sy+sh*.5,sw*.7);g.addColorStop(0,'#f7e2b0');g.addColorStop(.6,'#e2bf80');g.addColorStop(1,'#9c7444');
+  c.fillStyle=g;c.fillRect(sx,sy,sw,sh);c.strokeStyle='#3a2a1a';c.lineWidth=12;c.strokeRect(sx,sy,sw,sh);
+  // the hand (AR) drives the puppet from 39.8 s
+  const handX=k>7?.5+Math.sin((k-7)*1.5)*.22:.5;
+  const d=1-ease(seg(k,.3,3)),px=sx+sw*handX,s=1.5+d*2.2;
+  c.save();c.beginPath();c.rect(sx,sy,sw,sh);c.clip();c.filter=`blur(${(d*22).toFixed(1)}px)`;c.globalAlpha=1-d*.45;rover(t,px,sy+sh*.6,s,{silhouette:true,ink:'#21170e',rodColor:'#21170eaa'});c.restore();c.filter='none';
+  // labels for the three parts of shadow play
+  const lab=(s,x,y,a)=>{if(a<=0)return;c.save();c.globalAlpha=a;c.fillStyle='rgba(36,28,24,.9)';c.font='600 22px Arial';const w=c.measureText(s).width+28;c.beginPath();c.roundRect?c.roundRect(x,y,w,40,20):c.rect(x,y,w,40);c.fill();c.fillStyle='#f9e5bc';c.textBaseline='middle';c.fillText(s,x+14,y+21);c.restore()};
+  lab('the screen',sx+30,sy+24,win(t,34.2,40,.4));lab('the puppet',px+90,sy+sh*.36,win(t,35.4,40,.4));lab('the rods',px-260,sy+sh-70,win(t,36.6,40,.4));
+  // camera picture-in-picture with live hand landmarks
+  const pa=win(t,39.4,T.slotA,.6);if(pa>0){const bx=sx+sw-410,by=sy+sh-270,bw=380,bh=250;c.save();c.globalAlpha=pa;c.fillStyle='rgba(9,14,14,.92)';c.fillRect(bx,by,bw,bh);c.strokeStyle='#8fe0f0';c.lineWidth=2;c.strokeRect(bx,by,bw,bh);c.restore();
+    handSkeleton(bx+bw*(.08+handX*.62)-60,by+10,240,.15+.15*Math.sin(t*2),pa,'#8fe0f0aa');
+    text('CAMERA · AR HAND TRACKING',bx+12,by+bh-14,{size:16,font:'sans',weight:700,color:'#8fe0f0',spacing:3,alpha:pa,shadow:false});
+    c.save();c.globalAlpha=pa*.6;c.setLineDash([8,8]);L([bx+bw*(.08+handX*.62)+60,by],[px,sy+sh*.6-80],2,'#8fe0f0');c.setLineDash([]);c.restore()}
+  eyebrow('THE IDEA',120,250,win(t,32.7,T.slotA,.5));
+  text('Keep the shadow play:',120,330,{size:46,alpha:win(t,33,T.slotA,.6)});
+  ['the screen,','the puppet,','and the rods.'].forEach((s,i)=>text(s,120,400+i*56,{size:40,color:'#d8d2c4',alpha:win(t,34.2+i*1.2,T.slotA,.5)}));
+  text('Then hand the rods',120,640,{size:48,color:'#e6c788',alpha:win(t,38.6,T.slotA,.6)});text('to the audience.',120,702,{size:48,italic:true,color:'#e6c788',alpha:win(t,39,T.slotA,.6)});
+  text('Camera-based AR: your hand,',120,800,{size:32,font:'sans',color:'#8fe0f0',alpha:win(t,41.4,T.slotA,.6)});text('tracked live, moves the puppet.',120,844,{size:32,font:'sans',color:'#8fe0f0',alpha:win(t,41.8,T.slotA,.6)});
+}
+function sTitle(t){const k=t-T.title;
+  backdrop(PAL[0],t);orbs(t,'255,236,180',4,W*.7);
+  const s=1.75,rx=W*.7,rise=ease(seg(k,3.4,5.6)),ry=lerp(H+320,GY-75*s,rise);
+  shadowUnder(rx,s);rover(t,rx,ry,s,{glow:k>5,wave:k>5.6&&k<8.4});vignette(.35);
+  const g=c.createLinearGradient(0,0,W*.62,0);g.addColorStop(0,'rgba(21,30,28,.85)');g.addColorStop(1,'rgba(21,30,28,0)');c.fillStyle=g;c.fillRect(0,0,W*.62,H);
+  eyebrow('ABANDONED, BUT NOT FORGOTTEN',140,300,win(t,T.title+.6,T.story,.6));
+  text('余影 · Shadows Left Behind',140,400,{size:84,alpha:win(t,T.title+1,T.story,.7)});
+  text('A hero who was left behind:',140,500,{size:50,alpha:win(t,T.title+3.6,T.story,.7)});
+  text('NASA’s Opportunity rover.',140,566,{size:50,italic:true,color:'#e6c788',alpha:win(t,T.title+4.2,T.story,.7)});
+  text('A Wayang-inspired interactive shadow play, played with your hands.',140,650,{size:26,font:'sans',color:'#d8d2c4',alpha:win(t,T.title+5,T.story,.7)});
+}
+function photo(im,t,a,b,dir){const al=win(t,a,b,.6);if(al<=0||!im.complete||!im.naturalWidth)return;const k=seg(t,a,b),x=W*.44,y=300,w=W*.5,h=H-420;
+  c.save();c.globalAlpha=al;c.beginPath();c.roundRect?c.roundRect(x,y,w,h,10):c.rect(x,y,w,h);c.clip();c.fillStyle='#0d1110';c.fillRect(x,y,w,h);
+  const sc=Math.max(w/im.naturalWidth,h/im.naturalHeight)*(1.05+k*.08),iw=im.naturalWidth*sc,ih=im.naturalHeight*sc;
+  c.filter='sepia(.25) contrast(1.05)';c.drawImage(im,x+(w-iw)/2+dir*k*30,y+(h-ih)/2,iw,ih);c.filter='none';c.restore();
+  c.save();c.globalAlpha=al;c.strokeStyle='rgba(221,188,121,.45)';c.lineWidth=2;c.strokeRect(x,y,w,h);c.restore()}
+function sStory(t){const S=T.story;
+  c.fillStyle='#121a18';c.fillRect(0,0,W,H);glow(W*.68,H*.5,900,'221,188,121',.08);
+  const items=[[IMG.rock,S,S+5.4,'MARCH 2, 2004','Evidence of water','Fine layers in the “Last Chance” rock suggest water once flowed here.','PIA05625 · NASA/JPL/Cornell/ARC'],
+    [IMG.shadow,S+5.2,S+10.6,'JULY 26, 2004','Its own shadow','At Endurance Crater, Opportunity photographs its long shadow. That image inspired this piece.','PIA06739 · NASA/JPL'],
+    [IMG.last,S+10.4,T.prologue,'JUNE 10, 2018','The last transmission','A planet-wide dust storm blocks the Sun. This incomplete frame is the last image it sent.','PIA22929 · NASA/JPL-Caltech/Cornell/ASU']];
+  items.forEach(([im,a,b,d,h,p,cr],i)=>{photo(im,t,a,b,i%2?-1:1);const al=win(t,a+.2,b,.5);
+    eyebrow(d,120,420,al);text(h,120,500,{size:60,alpha:al});
+    wrap(p,640,30,'sans').forEach((ln,j)=>text(ln,120,570+j*44,{size:30,font:'sans',color:'#cfd2c8',alpha:al}));text('Image: '+cr,120,H-200,{size:20,font:'sans',color:'#8d917f',alpha:al})});
+  const al=win(t,S+.3,T.prologue,.6);eyebrow('THE REAL OPPORTUNITY',120,150,al);
+  text('Built for 90 days. It kept going for 14 years and ~45.16 km.',120,225,{size:40,alpha:al});
+}
+function sPrologue(t){const S=T.prologue,k=t-S;
+  backdrop(PAL[0],t);orbs(t,'255,236,180',5);
+  const s=1.6,hopT=[T.rocksFly,T.beaconReach];
+  const rx=W*lerp(.5,.72,ease(seg(t,T.beaconOn+.4,T.beaconReach-.4))),ry=GY-75*s-hop(t,hopT)*s;
+  if(t>=T.rocksFly-.4){shadowUnder(rx,s);rover(t,rx,ry,s,{glow:true,wave:t>T.rocksFly&&t<T.rocksFly+3})}
+  const waves=Math.min(4,Math.floor(seg(t,S+.6,T.rocksFly-.2)*4.0001)),prog=waves/4,fly=Math.max(0,t-T.rocksFly);
+  for(let i=0;i<14;i++){const a=-Math.PI*.95+i*Math.PI*.9/13,r=.6+rnd(i)*.45,sz=(.75+rnd(i+20)*.45)*62*s*.6,side=Math.cos(a)<0?-1:1;
+    const x=W/2+Math.cos(a)*r*120*s+Math.cos(a)*prog*30*s+side*fly*900,y=GY-40*s+Math.sin(a)*r*80*s+20*s-prog*8*s+fly*fly*1400-Math.sin(Math.min(fly*3,Math.PI))*60;
+    if(fly>1.2)continue;c.save();c.globalAlpha=1-fly/1.2;c.translate(x,y);c.rotate(rnd(i+5)*3+side*fly*3);
+    P([[-sz,2],[-sz*.7,-sz*.72],[sz*.36,-sz*.94],[sz,-sz*.15],[sz*.69,sz*.61],[-sz*.42,sz*.77]],['#644936','#785740','#8d674b'][i%3]);
+    P([[-sz,2],[sz,-sz*.15],[sz*.69,sz*.61],[-sz*.42,sz*.77]],'rgba(32,20,12,.3)');L([-sz*.7,-sz*.72],[sz*.36,-sz*.94],2,'rgba(214,170,120,.75)');c.restore()}
+  if(t<T.rocksFly+.1){const wx=W/2+Math.sin(k*Math.PI*.9)*230;glow(wx,H*.36,140,'255,240,200',.25);cue('✋',wx,H*.36,130,win(t,S+.3,T.rocksFly+.1,.3),Math.sin(k*Math.PI*.9)*.35)}
+  const bAl=win(t,T.beaconOn,T.beaconReach+.4,.4);if(bAl>0){const bx=W*.72,by=H*.64,pulse=1+Math.sin(t*5)*.13;c.save();c.globalAlpha=bAl;glow(bx,by,130*pulse,'255,236,170',.45);
+    for(let r=0;r<8;r++){const a=r*Math.PI/4+t*.9,o=(r%2?55:75)*pulse;L([bx+Math.cos(a)*32,by+Math.sin(a)*32],[bx+Math.cos(a)*o,by+Math.sin(a)*o],r%2?2.5:4,'rgba(255,246,206,.7)')}
+    C(bx,by,24,'#fff1b5');C(bx,by,12,'#fffdf2');c.restore()}
+  vignette(.38);
+  tag('PROLOGUE  ·  WAVE TO CLEAR THE ROCKS',t,S+.2,T.slotB);
+  text(waves<4?`Wave side to side · ${waves} / 4`:'',W-90,96,{size:24,font:'sans',weight:700,align:'right',color:'#fff1cc',alpha:win(t,S+.6,T.rocksFly+.1,.3)});
+}
+function sActI(t){const S=T.act1;
+  backdrop(PAL[1],t);orbs(t,'255,214,170',5);
+  const s=1.45,xs=[.27,.5,.73],starts=T.scans,hopT=starts.map(a=>a+SCAN);
+  const stops=[.3,...xs,.62],times=[S,...starts.map(a=>a-.4),starts[2]+1.6];
+  let idx=0;while(idx<times.length-1&&t>=times[idx+1])idx++;
+  const from=stops[Math.max(0,idx-1)],to=stops[idx],rx=W*lerp(from,to,ease(seg(t,times[idx],times[idx]+.6)));
+  xs.forEach((x,i)=>rock(W*x,H*.4,i,t>=starts[i]+SCAN,t));
+  shadowUnder(rx,s);rover(t,rx,GY-75*s-hop(t,hopT)*s,s,{glow:true,spin:rx*.01});
+  starts.forEach((a,i)=>{const p=seg(t,a,a+SCAN);if(p>0&&p<1){scanRing(W*xs[i],H*.4-10,p,t);cue('👌',W*xs[i]+110,H*.4-140,90,.85)}});
+  const al=win(t,T.act1+7.4,T.act2-.4,.5);if(al>0&&IMG.rock.complete){const x=W-600,y=60;c.save();c.globalAlpha=al;c.fillStyle='rgba(33,27,23,.95)';c.fillRect(x,y,520,330);c.drawImage(IMG.rock,x+12,y+12,496,240);
+    c.fillStyle='#f5e4ca';c.font='600 22px Arial';c.fillText('Real NASA image · “Last Chance” rock',x+16,y+286);c.fillStyle='#bfb5a2';c.font='18px Arial';c.fillText('March 2, 2004 · PIA05625',x+16,y+314);c.restore()}
+  vignette(.38);
+  tag('ACT I  ·  PINCH TO SCAN FOR WATER',t,S+.2,T.slotC);
+  const n=starts.filter(a=>t>=a+SCAN).length;text(`Rocks scanned · ${n} / 3`,W-90,96,{size:24,font:'sans',weight:700,align:'right',color:'#fff1cc',alpha:win(t,S+.4,starts[2]+2.2,.3)});
+}
+function sActII(t){const S=T.act2;
+  backdrop(PAL[2],t);
+  const s=1.5,rx=W*.5;
+  for(let i=0;i<140;i++){const px=((i*137+t*420)%(W+200))-100,py=(i*73)%H;L([px,py],[px+48,py-2],2,'rgba(63,48,33,.16)')}
+  const lit=win(t,S+.4,T.lightEnd,.4);glow(rx,H*.42,620,'255,234,180',.42*lit);
+  shadowUnder(rx,s);rover(t,rx,GY-75*s,s,{glow:t<T.lightEnd+4.6});
+  if(t<T.lightEnd)cue('✋',rx,H*.24+Math.sin(t*2.6)*8,120,win(t,S+.3,T.lightEnd,.4));
+  if(t>T.lightEnd-.6&&t<T.lightEnd+4.6){const ph=(t*1.1)%1;c.strokeStyle=`rgba(255,241,172,${.6*(1-ph)})`;c.lineWidth=3;c.beginPath();c.arc(rx+90,GY-75*s-120,20+ph*140,-2.4,-.5);c.stroke()}
+  blackFade(Math.min(.62,seg(t,T.lightEnd-1.6,T.lightEnd+4.4)*.62));
+  eyebrow('JUNE 10, 2018 · LAST SIGNAL',W/2,H*.2,win(t,T.lightEnd+4,T.act3,.6),'center');
+  vignette(.5);
+  tag('ACT II  ·  OPEN YOUR HAND TO HOLD THE LIGHT',t,S+.2,T.slotD);
+  text(t<T.lightEnd?`Hold the light · ${Math.max(0,Math.ceil(T.lightEnd-t))} s`:'',W-90,96,{size:24,font:'sans',weight:700,align:'right',color:'#fff1cc',alpha:win(t,S+.3,T.lightEnd,.3)});
+}
+function sActIII(t){const S=T.act3;
+  backdrop(PAL[3],t,{stars:true,sun:false});orbs(t,'190,236,240',1);
+  const s=1.45,ex=W*.85,ey=H*.23,R=88,hopT=T.carry.map(a=>a+1.5);
+  const delivered=T.carry.filter(a=>t>=a+1.5).length;
+  earth(ex,ey,R,t,delivered===3?win(t,T.carry[2]+1.5,T.how-.4,.4):0);
+  const rx=W*.24;shadowUnder(rx,s);rover(t,rx,GY-75*s-hop(t,hopT)*s,s,{glow:true});
+  const homes=[[.4,.5],[.53,.41],[.66,.53]];
+  for(let i=0;i<3;i++){const a=T.carry[i],b=a+1.5;if(t>=b)continue;const vis=win(t,S+.6,b+.2,.6);if(vis<=0)continue;
+    const p=ease(seg(t,a,b)),x=lerp(homes[i][0]*W,ex,p),y=lerp(homes[i][1]*H,ey,p)-Math.sin(p*Math.PI)*H*.12+(p>0?0:Math.sin(t*3+i)*6),held=p>0;
+    glow(x,y,held?80:66,MEM_TINTS[i],.5*vis);c.save();c.globalAlpha=vis*(1-p*.5);memIcon(x,y-4,i,t,(held?2.6:2.2)*(1-p*.45));c.restore();if(p<.6)memLabel(x,y+46,MEM_NAMES[i],vis*(1-p*1.6));
+    if(held&&p<.97)cue('👌',x+70,y-80,80,.8)}
+  vignette(.38);
+  tag('ACT III  ·  CARRY THE MEMORIES HOME',t,S+.2,T.slotE);
+  text(`Memories to Earth · ${delivered} / 3`,W-90,96,{size:24,font:'sans',weight:700,align:'right',color:'#fff1cc',alpha:win(t,S+.4,T.carry[2]+2.4,.3)});
+}
+function sHow(t){const S=T.how;
+  c.fillStyle='#101716';c.fillRect(0,0,W,H);
+  c.strokeStyle='#ffffff0a';c.lineWidth=1;for(let x=0;x<W;x+=48){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke()}for(let y=0;y<H;y+=48){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke()}
+  const al=win(t,S+.2,T.end,.5),kk=(Math.sin(t*1.6)+1)/2;handSkeleton(120,200,620,kk,al);
+  text(ease(kk)>.7?'PINCH':'OPEN PALM',120+310,200+620+50,{size:24,font:'sans',weight:700,color:'#8fd0e0',align:'center',spacing:6,alpha:al});
+  eyebrow('HOW IT WORKS',860,230,al);
+  const steps=[['Camera','stays on your device — nothing recorded or uploaded'],['Hand tracking','MediaPipe finds 21 points on your hand'],['Gestures','wave · pinch · open palm move the story'],['Shadow stage','Canvas puppet, paper-cut motifs, Oppy’s voice']];
+  steps.forEach(([h,d],i)=>{const a=win(t,S+.6+i*.9,T.end,.5),y=330+i*130;c.save();c.globalAlpha=a;C(880,y-12,22,'#ddbc79');c.restore();
+    text(String(i+1),880,y-3,{size:24,font:'sans',weight:700,color:'#221c14',align:'center',alpha:a,shadow:false});text(h,930,y,{size:44,alpha:a});text(d,930,y+42,{size:26,font:'sans',color:'#b4b9af',alpha:a})});
+  text('No camera? Every act also works with a mouse.',860,880,{size:28,font:'sans',italic:true,color:'#e6c788',alpha:win(t,S+5.2,T.end,.5)});
+}
+function sEnd(t){const S=T.end;
+  backdrop(['#0f1820','#2c2a2c',PAL[2][2],'#3a3036aa','#2e262bcc','#d2e4cf'],t,{stars:true,sun:false});
+  const ex=W*.84,ey=H*.16,R=64;earth(ex,ey,R,t,.3,false);
+  const s=1.1,rx=W*.13,ry=GY-75*s;rover(t,rx,ry,s,{glow:true,rods:false,ink:'#1a1513',gold:'#6b5a44'});
+  // the keepsakes travel high, above the words
+  for(let i=0;i<3;i++){const ph=((t*.09+i/3)%1),e=ease(ph),x=lerp(rx+60,ex,e),y=lerp(ry-90,ey,e)-Math.sin(e*Math.PI)*H*.42,a=Math.sin(ph*Math.PI)*.85*(x>W*.22&&x<W*.78&&y>280&&y<720?.12:1);glow(x,y,56,MEM_TINTS[i],.45*a);c.save();c.globalAlpha=a;memIcon(x,y,i,t,1.7*(1-e*.4));c.restore()}
+  eyebrow('ABANDONED, BUT NOT FORGOTTEN',W/2,330,win(t,S+.4,T.dur,.7),'center');
+  text('余影 · Shadows Left Behind',W/2,450,{size:80,align:'center',alpha:win(t,S+.8,T.dur,.8)});
+  text('A Malaysian heritage art,',W/2,550,{size:52,align:'center',alpha:win(t,S+2.6,T.dur,.8)});
+  text('retold with technology.',W/2,620,{size:52,align:'center',italic:true,color:'#e6c788',alpha:win(t,S+3.2,T.dur,.8)});
+  text('Wayang Kulit · camera-based AR · interactive storytelling',W/2,700,{size:24,font:'sans',color:'#cfd2c8',align:'center',spacing:2,alpha:win(t,S+4.4,T.dur,.8)});
+  text('Concept prototype · Not an official NASA project · Images: NASA/JPL, NASA/JPL/Cornell/ARC, NASA/JPL-Caltech/Cornell/ASU',W/2,770,{size:19,font:'sans',color:'#a3a693',align:'center',alpha:win(t,S+5,T.dur,.8)});
+  text('Built with HTML · Canvas · JavaScript · MediaPipe Hand Landmarker · Voices: neural TTS (edge-tts)',W/2,800,{size:19,font:'sans',color:'#a3a693',align:'center',alpha:win(t,S+5.2,T.dur,.8)});
+}
+/* ---------- gameplay slots ---------- */
+let cleanSlots=/slots=clean/.test(location.hash);
+const SLOT_CUES={DEMO:'✋'};// 30s demo
+function sSlot(t,slot){const len=SLOT_LENGTHS[slot.id],k=t-slot.t,left=Math.max(0,len-k);
+  c.fillStyle='#000';c.fillRect(0,0,W,H);
+  if(slot.ready&&slot.el.videoWidth){const v=slot.el,cr=slot.crop||[0,0,v.videoWidth,v.videoHeight],s=Math.min(W/cr[2],H/cr[3]),w=cr[2]*s,h=cr[3]*s;c.drawImage(v,cr[0],cr[1],cr[2],cr[3],(W-w)/2,(H-h)/2,w,h);
+    const a=win(t,slot.t+.3,slot.t+Math.min(len,4.5),.5);if(a>0){c.save();c.globalAlpha=a;c.font='600 22px Arial';if('letterSpacing' in c)c.letterSpacing='3px';const label=`LIVE DEMO`,lw=c.measureText(label).width+60;
+      c.fillStyle='rgba(20,16,13,.82)';c.beginPath();c.roundRect?c.roundRect(70,H-130,lw,50,25):c.rect(70,H-130,lw,50);c.fill();C(98,H-105,7,'#e05a4f');c.fillStyle='#f9e5bc';c.textBaseline='middle';c.fillText(label,116,H-104);c.restore()}
+    return}
+  if(cleanSlots)return;
+  c.fillStyle='#0c100f';c.fillRect(0,0,W,H);
+  c.strokeStyle='#ffffff08';c.lineWidth=1;for(let x=0;x<W;x+=60){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke()}for(let y=0;y<H;y+=60){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke()}
+  c.save();c.strokeStyle='rgba(221,188,121,.55)';c.lineWidth=3;c.setLineDash([18,14]);c.lineDashOffset=-t*30;c.strokeRect(60,60,W-120,H-120);c.restore();
+  eyebrow('INSERT YOUR LIVE DEMO FOOTAGE HERE',140,190,1);
+  text(slot.title,140,290,{size:76});
+  text(slot.sub,140,350,{size:32,font:'sans',color:'#cfd2c8'});
+  text('Show:',140,450,{size:30,font:'sans',weight:700,color:'#ddbc79'});
+  slot.shows.forEach((s,i)=>{C(152,492+i*58,6,'#ddbc79');text(s,176,503+i*58,{size:32,font:'sans',color:'#ede7db'})});
+  text(left.toFixed(1)+' s',W-160,470,{size:150,align:'right',color:'#ddbc79'});
+  text(`slot length ${len} s`,W-160,525,{size:26,font:'sans',align:'right',color:'#9c9d92'});
+  cue(SLOT_CUES[slot.id],W-330,700+Math.sin(t*3)*10,150,.85,Math.sin(t*4)*.3);
+  text('Drop your clip here →  nasastorytelling/'+slot.file,140,H-170,{size:26,font:'sans',color:'#8fe0f0'});
+  text('It then plays here automatically. Or press K for a clean black slot and add the clip in your video editor.',140,H-125,{size:22,font:'sans',color:'#9c9d92'});
+}
+function sDemoCard(t){const k=t-F.demo;
+  c.fillStyle='#07090a';c.fillRect(0,0,W,H);glow(W/2,H*.46,900,'221,188,121',.10);
+  c.strokeStyle='#ffffff08';c.lineWidth=1;for(let x=0;x<W;x+=60){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke()}
+  const a=ease(seg(k,.1,.7)),pulse=.6+.4*Math.abs(Math.sin(t*3));
+  c.save();c.globalAlpha=a;glow(W/2-470,H*.46-48,60,'224,90,79',.5*pulse);C(W/2-470,H*.46-48,18,'#e05a4f');c.restore();
+  text('LIVE DEMO',W/2+40,H*.46,{size:150,align:'center',weight:600,alpha:a});
+  text('Camera-based AR hand tracking  ·  all four acts in one play-through',W/2,H*.46+80,{size:30,font:'sans',color:'#cfd2c8',align:'center',spacing:2,alpha:ease(seg(k,.5,1.1))});
+}
+/* ---------- 30-second demo: opening = Wayang Kulit meets camera AR ---------- */
+function sOpen(t){
+  c.fillStyle='#0b0806';c.fillRect(0,0,W,H);glow(W/2,H*.55,1100,'200,120,50',.12);
+  const sx=W*.2,sy=210,sw=W*.6,sh=H*.56,lit=ease(seg(t,0,.8));
+  kelir(sx,sy,sw,sh,t,.5,lit);
+  // traditional shadows
+  c.save();c.beginPath();c.rect(sx,sy,sw,sh);c.clip();c.filter='blur(1.2px)';
+  const enter=ease(seg(t,.2,1.6));wayangFigure(lerp(sx-120,sx+sw*.34,enter),sy+sh*.55,1.3,t);
+  c.save();c.translate(sx+sw*.68,0);c.scale(-1,1);rover(t,0,sy+sh*.62,1.05,{silhouette:true,ink:'#1c130c',rodColor:'#1c130caa'});c.restore();
+  c.restore();c.filter='none';
+  // from 3.9 s a scan line turns the screen into data, then the hand takes the rod
+  const scan=lerp(sx-10,sx+sw+10,ease(seg(t,3.9,6.2)));
+  c.save();c.beginPath();c.rect(sx,sy,Math.max(0,scan-sx),sh);c.clip();c.fillStyle='#071419';c.fillRect(sx,sy,sw,sh);
+  c.strokeStyle='rgba(143,224,240,.12)';c.lineWidth=1;for(let x=sx;x<sx+sw;x+=40){c.beginPath();c.moveTo(x,sy);c.lineTo(x,sy+sh);c.stroke()}for(let y=sy;y<sy+sh;y+=40){c.beginPath();c.moveTo(sx,y);c.lineTo(sx+sw,y);c.stroke()}
+  wayangWire(sx+sw*.34,sy+sh*.55,1.3,t,1);
+  c.save();c.translate(sx+sw*.68,0);c.scale(-1,1);c.globalAlpha=.9;rover(t,0,sy+sh*.62,1.05,{silhouette:true,ink:'#8fe0f0',rodColor:'#8fe0f066'});c.restore();
+  c.restore();
+  if(scan>sx&&scan<sx+sw){L([scan,sy],[scan,sy+sh],3,'#bff3ff');glow(scan,sy+sh/2,220,'143,224,240',.25)}
+  const ha=ease(seg(t,6,6.8));if(ha>0){const hx=sx+sw*.5+Math.sin(t*1.6)*120;handSkeleton(hx-150,sy+sh*.12,300,(Math.sin(t*2)+1)/2*.6,ha,'#8fe0f0cc');
+    c.save();c.globalAlpha=ha*.7;c.setLineDash([8,8]);L([hx,sy+sh*.6],[sx+sw*.68,sy+sh*.45],2,'#8fe0f0');c.setLineDash([]);c.restore()}
+  // headings
+  eyebrow('MALAYSIAN HERITAGE  ×  STORYTELLING TECHNOLOGY',W/2,92,win(t,.2,F.slot,.4),'center');
+  text('Wayang Kulit · Malaysian shadow puppetry',W/2,160,{size:48,align:'center',alpha:win(t,.4,4.1,.4)});
+  text('+ camera AR: your hand becomes the puppet rod',W/2,160,{size:48,align:'center',color:'#8fe0f0',alpha:win(t,4.2,F.slot,.4)});
+  text('Ling Yew Han  ·  Team cina  ·  Sibu, Malaysia',70,H-40,{size:20,font:'sans',color:'#cdb68a',alpha:win(t,.4,F.slot,.4),shadow:false});
+}
+function slotCaptions(t){const k=t-F.slot;if(k<0||k>SLOT_LENGTHS.DEMO)return;
+  for(const [a,b,s] of STRIPS){const al=win(k,a+.15,b,.35);if(al<=0)continue;
+    c.save();c.globalAlpha=al;c.font='600 30px Arial,sans-serif';const w=c.measureText(s).width+64;const x=(W-w)/2,y=H-130;
+    c.fillStyle='rgba(20,15,11,.82)';c.beginPath();c.roundRect?c.roundRect(x,y,w,62,31):c.rect(x,y,w,62);c.fill();
+    c.strokeStyle='rgba(221,188,121,.6)';c.lineWidth=1.5;c.stroke();C(x+30,y+31,6,'#ddbc79');
+    c.fillStyle='#f6e7c8';c.textBaseline='middle';c.textAlign='left';c.fillText(s,x+46,y+32);c.restore()}}
+function watermark(){c.save();c.globalAlpha=.75;c.font='600 18px Arial';c.textAlign='right';c.fillStyle='rgba(0,0,0,.45)';const s='AI-assisted  ·  voices: neural TTS';const w=c.measureText(s).width+24;
+  c.fillRect(W-40-w,28,w,34);c.fillStyle='#f3e6c8';c.textBaseline='middle';c.fillText(s,W-52,46);c.restore()}
+const SCENES=[[F.open,F.slot,sOpen],[F.slot,DURATION,t=>sSlot(t,SLOTS[0])]];
+
+function renderAt(t){
+  t=clamp(t,0,DURATION);
+  c.setTransform(1,0,0,1,0,0);c.fillStyle='#000';c.fillRect(0,0,cv.width,cv.height);
+  const k=Math.min(VW/W,VH/H)*DPR,ox=(cv.width-W*k)/2,oy=(cv.height-H*k)/2;c.setTransform(k,0,0,k,ox,oy);
+  c.save();c.beginPath();c.rect(0,0,W,H);c.clip();
+  const sc=SCENES.find(([a,b])=>t>=a&&t<b)||SCENES[SCENES.length-1];
+  sc[2](sc.length>3?sc[3]+(t-sc[0])*(sc[4]-sc[3])/(sc[1]-sc[0]):t);
+  bursts(t);captions(t);watermark();slotCaptions(t);
+  for(const [a] of SCENES){if(a===0)continue;const d=Math.abs(t-a);if(d<.45)blackFade(1-d/.45)}for(const a of SEG_CUTS){const d=Math.abs(t-a);if(d<.14)blackFade((1-d/.14)*.85)}
+  blackFade(Math.max(seg(.6-t,0,.6),seg(t,DURATION-1.6,DURATION)));
+  c.restore();
+}
+window.renderAt=renderAt;window.DEMO_DURATION=DURATION;
+
+/* ================= playback, audio, controls ================= */
+let clock=0,prevClock=0,playing=false,last=0,muted=false,actx=null,pad=null,voiceOut=null;
+// Voices are decoded into memory and scheduled on the Web Audio clock, and while playing the film clock IS the
+// audio clock — so seeking lands mid-sentence correctly and picture and voice cannot drift (the local Python
+// server cannot serve byte ranges, which breaks seeking with plain <audio>). Opened as a file:// page, fetch is
+// blocked, so it falls back to <audio> elements that start each clip at its cue.
+let webAudio=false,scheduled=false,ctxBase=0,clockBase=0,sources=[];
+const clips=VOICE.map(v=>({...v,el:null,on:false,buf:null}));
+function ensureCtx(){if(!actx){actx=new (window.AudioContext||window.webkitAudioContext)();voiceOut=actx.createGain();voiceOut.connect(actx.destination)}return actx}
+// version tag so a browser never plays a cached older narration (bump it after regenerating the voices)
+const AUDIO_V=Object.values(ND).join('-');
+async function loadVoices(){try{ensureCtx();await Promise.all(clips.map(async cl=>{const r=await fetch(cl.src+'?v='+AUDIO_V,{cache:'no-cache'});if(!r.ok)throw new Error(cl.src);cl.buf=await actx.decodeAudioData(await r.arrayBuffer())}));webAudio=true}
+  catch{webAudio=false;clips.forEach(cl=>{cl.el=new Audio(cl.src+'?v='+AUDIO_V);cl.el.preload='auto'})}}
+const speaking=()=>webAudio?playing&&clips.some(cl=>clock>=cl.t&&clock<cl.t+cl.d):clips.some(cl=>cl.on);
+function stopClips(){sources.forEach(s=>{try{s.stop()}catch{}});sources=[];scheduled=false;clips.forEach(cl=>{cl.el?.pause();cl.on=false})}
+function scheduleVoices(){stopClips();ctxBase=actx.currentTime+.06;clockBase=clock;
+  for(const cl of clips){if(cl.t+cl.d<=clock)continue;const src=actx.createBufferSource();src.buffer=cl.buf;src.connect(voiceOut);src.start(ctxBase+Math.max(0,cl.t-clock),Math.max(0,clock-cl.t));sources.push(src)}
+  scheduled=true}
+// fallback (<audio>): start/stop clips for the current clock; returns true while a due clip is still loading
+function syncClips(){if(webAudio)return false;let waiting=false;clips.forEach(cl=>{const want=playing&&!muted&&clock>=cl.t&&clock<cl.t+cl.d;
+  if(want&&!cl.on){if(cl.el.readyState>=3){cl.el.currentTime=Math.max(0,clock-cl.t);cl.el.play().catch(()=>{});cl.on=true}else waiting=true}
+  if(!want&&cl.on){cl.el.pause();cl.on=false}});return waiting}
+const voicesReady=loadVoices();
+// gameplay clips: load clips/<file> for each slot if it exists (as a blob, so seeking works on the local server)
+function attachVideo(slot,src){const v=document.createElement('video');v.preload='auto';v.playsInline=true;v.src=src;
+  v.addEventListener('loadeddata',()=>{slot.el=v;slot.ready=true;updateUI()},{once:true});v.addEventListener('error',()=>{slot.ready=false},{once:true})}
+SLOTS.forEach(slot=>{slot.ready=false;
+  fetch(slot.file).then(r=>r.ok?r.blob():null).then(b=>{if(b&&b.size>1000)attachVideo(slot,URL.createObjectURL(b))})
+    .catch(()=>{if(location.protocol==='file:')attachVideo(slot,slot.file)})});
+const slotNow=()=>SLOTS.find(s=>clock>=s.t&&clock<s.t+SLOT_LENGTHS[s.id]);
+function syncSlots(){SLOTS.forEach(slot=>{if(!slot.ready)return;const v=slot.el,len=SLOT_LENGTHS[slot.id],rel=clock-slot.t,inside=rel>=0&&rel<len,local=slotLocal(slot,rel),end=(v.duration||len)-.05;
+  if(inside&&playing){v.muted=muted;v.playbackRate=slot.rate||1;v.volume=VOICE.some(x=>clock>=x.t-.15&&clock<x.t+x.d+.2)?.015:.05;if(local<end){if(v.paused){v.currentTime=local;v.play().catch(()=>{})}else if(Math.abs(v.currentTime-local)>.3)v.currentTime=local}}
+  else{if(!v.paused)v.pause();if(inside&&Math.abs(v.currentTime-Math.min(local,end))>.05)v.currentTime=Math.min(local,end)}})}
+function note(f,dur,type,vol,delay=0){if(muted||!actx)return;const o=actx.createOscillator(),g=actx.createGain(),at=actx.currentTime+delay;o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0,at);g.gain.linearRampToValueAtTime(vol,at+.01);g.gain.exponentialRampToValueAtTime(.0001,at+dur);o.connect(g).connect(actx.destination);o.start(at);o.stop(at+dur+.05)}
+function chime(big){[784,988,1175,1568].slice(0,big?4:3).forEach((f,i)=>note(f,.4,'triangle',.05,.05+i*.07))}
+function bell(f,soft){note(f,1.6,'sine',soft?.025:.045);note(f*2.76,.5,'sine',soft?.006:.012);note(f*5.4,.25,'sine',.004)}
+function startPad(){try{ensureCtx();if(pad)return;const master=actx.createGain();master.gain.value=0;const lp=actx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;lp.connect(master).connect(actx.destination);
+  const oscs=[110,164.8,220,277.2].map((f,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type=i%2?'triangle':'sine';o.frequency.value=f;o.detune.value=(i-1.5)*4;g.gain.value=[.5,.25,.18,.1][i];o.connect(g).connect(lp);o.start();return o});pad={master,oscs}}catch{}}
+const PAD_ROOTS=[98,110];
+const chapterIndex=()=>{let i=0;CHAPTERS.forEach((ch,j)=>{if(clock>=ch.t)i=j});return i};
+function updatePad(){if(!pad)return;const root=PAD_ROOTS[chapterIndex()];pad.oscs.forEach((o,i)=>o.frequency.setTargetAtTime(root*[1,1.5,2,2.52][i],actx.currentTime,.8));
+  const sl=slotNow(),duck=sl?(sl.ready?.2:.7):1;   // silent under real footage (it has the game's own sound)
+  const vol=playing&&!muted?(speaking()?.022:.035)*duck*(1-seg(clock,DURATION-2,DURATION)):0;pad.master.gain.setTargetAtTime(vol,actx.currentTime,.4)}
+function seek(t){clock=clamp(t,0,DURATION);prevClock=clock;stopClips();if(playing&&webAudio&&actx.state==='running')scheduleVoices();else syncClips();updateUI()}
+function play(){if(clock>=DURATION)clock=0;playing=true;ensureCtx();startPad();last=performance.now();
+  actx.resume().then(()=>{if(playing&&webAudio)scheduleVoices()});syncClips();updateUI();poke()}
+function pause(){playing=false;stopClips();updatePad();updateUI();document.body.classList.remove('idle')}
+function fmt(s){s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+const track=$('#track');CHAPTERS.forEach(ch=>{if(!ch.t)return;const i=document.createElement('i');i.style.left=(ch.t/DURATION*100)+'%';i.title=ch.name;track.append(i)});
+function updateUI(){const p=clock/DURATION*100;$('#fill').style.width=p+'%';$('#knob').style.left=p+'%';$('#time').textContent=fmt(clock)+' / '+fmt(DURATION);
+  const ci=chapterIndex();$('#chap').textContent=`${ci+1}. ${CHAPTERS[ci].name}`;$('#pp').textContent=playing?'❚❚':'▶'}
+let dragging=false;const toT=e=>{const r=track.getBoundingClientRect();return clamp((e.clientX-r.left)/r.width,0,1)*DURATION};
+track.addEventListener('pointerdown',e=>{dragging=true;track.setPointerCapture(e.pointerId);seek(toT(e))});track.addEventListener('pointermove',e=>{if(dragging)seek(toT(e))});track.addEventListener('pointerup',()=>dragging=false);
+$('#pp').onclick=()=>playing?pause():play();
+$('#mute').onclick=()=>{muted=!muted;$('#mute').textContent='Sound: '+(muted?'off':'on');if(voiceOut)voiceOut.gain.value=muted?0:1;syncClips();updatePad()};
+$('#cc').onclick=()=>{captionsOn=!captionsOn;$('#cc').textContent='Captions: '+(captionsOn?'on':'off')};
+$('#ui').onclick=()=>document.body.classList.toggle('hide-ui');
+$('#fs').onclick=async()=>{try{document.fullscreenElement?await document.exitFullscreen():await document.documentElement.requestFullscreen()}catch{}};
+$('#play-start').disabled=true;$('#play-start').textContent='Loading voices…';
+voicesReady.then(()=>{$('#play-start').disabled=false;$('#play-start').textContent='▶ Play the demo'});
+$('#play-start').onclick=()=>{$('#start').hidden=true;play()};
+let idleTimer=0;function poke(){document.body.classList.remove('idle');clearTimeout(idleTimer);if(playing)idleTimer=setTimeout(()=>document.body.classList.add('idle'),1800)}
+addEventListener('pointermove',poke);
+addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey)return;const k=e.key;
+  if(k===' '){e.preventDefault();if(!$('#start').hidden){$('#start').hidden=true;play()}else playing?pause():play()}
+  else if(k==='ArrowRight')seek(clock+5);else if(k==='ArrowLeft')seek(clock-5);
+  else if(k==='r'||k==='R'){seek(0);if(!$('#start').hidden)$('#start').hidden=true;play()}
+  else if(k==='h'||k==='H')document.body.classList.toggle('hide-ui');
+  else if(k==='m'||k==='M')$('#mute').click();else if(k==='f'||k==='F')$('#fs').click();else if(k==='c'||k==='C')$('#cc').click();
+  else if(k==='k'||k==='K')cleanSlots=!cleanSlots;
+  else if(k===']'||k==='['){const i=chapterIndex()+(k===']'?1:(clock-CHAPTERS[chapterIndex()].t<1?-1:0));if(CHAPTERS[i])seek(CHAPTERS[i].t+.01)}
+  else{const i='1234567890-'.indexOf(k);if(i>=0&&CHAPTERS[i])seek(CHAPTERS[i].t+.01)}poke()});
+$('#start p').textContent=`30-second demo · NASA Space Apps 2026 · ${fmt(DURATION)} · sound on`;
+function readHash(){const h=new URLSearchParams(location.hash.slice(1));if(h.has('t'))seek(+h.get('t')||0);else if(h.has('ch')){const ch=CHAPTERS[(+h.get('ch')||1)-1];if(ch)seek(ch.t+.01)}}
+readHash();addEventListener('hashchange',readHash);
+
+function loop(now){
+  if(playing){
+    if(webAudio){if(scheduled)clock=clockBase+Math.max(0,actx.currentTime-ctxBase)}   // film clock = audio clock
+    else if(!syncClips())clock+=Math.min(.25,(now-last)/1000);                          // fallback: wait while a clip loads
+    if(clock>=DURATION){clock=DURATION;pause()}}
+  last=now;syncSlots();
+  if(playing){for(const b of BURSTS)if(prevClock<b.t&&clock>=b.t)chime(b.big);for(const b of BELLS)if(prevClock<b.t&&clock>=b.t)bell(b.f,b.soft);syncClips();updatePad();updateUI()}
+  prevClock=clock;renderAt(clock);requestAnimationFrame(loop)}
+updateUI();requestAnimationFrame(loop);
+</script>
+<style>
+#recbtn{position:fixed;top:14px;right:14px;z-index:20;font:600 15px/1 system-ui,sans-serif;padding:11px 16px;border-radius:999px;border:1px solid #e9c46a;background:#1b140e;color:#f5e6c8;cursor:pointer}
+#recbtn:hover{background:#2a1f15}
+#rectip{position:fixed;top:58px;right:14px;z-index:20;font:13px/1.4 system-ui,sans-serif;color:#d8c8a8;background:#0b0907cc;padding:8px 12px;border-radius:10px;max-width:280px}
+body.recording #recbtn,body.recording #rectip,body.recording #bar{display:none!important}
+body.recording{cursor:none}
+</style>
+<button id="recbtn" type="button">● Record video</button>
+<div id="rectip">Click, choose <b>this tab</b> . The film plays from the start and the video downloads when it ends.</div>
+<script>
+// one-click recording of this film in the viewer's own browser (smooth: uses the real GPU), with the tab's sound
+document.getElementById('recbtn').onclick=async()=>{
+  let stream;
+  try{stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:60,width:{ideal:1920},height:{ideal:1080}},audio:false,preferCurrentTab:true,selfBrowserSurface:'include'})}
+  catch(e){return}
+  // sound comes straight from the film: narration (Web Audio) + gameplay clip at its in-film volume
+  ensureCtx();const dest=actx.__dest=actx.__dest||actx.createMediaStreamDestination();
+  const v=SLOTS[0].el,g=actx.createGain();try{actx.createMediaStreamSource(v.captureStream()).connect(g);window.__origConnect.call(g,dest)}catch(e){}
+  const gainSync=setInterval(()=>{g.gain.value=(v.muted||v.paused)?0:v.volume},30);
+  stream=new MediaStream([...stream.getVideoTracks(),...dest.stream.getAudioTracks()]);
+  const mime=['video/mp4;codecs=avc1,mp4a','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
+  const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:12000000}),chunks=[];
+  rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+  document.body.classList.add('recording');document.getElementById('start').hidden=true;
+  try{await voicesReady}catch{}
+  pause();seek(0);
+  await new Promise(r=>setTimeout(r,700));            // let the share bar settle
+  rec.start(500);await new Promise(r=>setTimeout(r,300));play();
+  await new Promise(done=>{const t=setInterval(()=>{if(clock>=DURATION-.01||stream.getVideoTracks()[0].readyState==='ended'){clearInterval(t);done()}},100)});
+  await new Promise(r=>setTimeout(r,600));
+  await new Promise(r=>{rec.onstop=r;rec.stop()});stream.getVideoTracks().forEach(t=>t.stop());clearInterval(gainSync);
+  document.body.classList.remove('recording');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(chunks,{type:mime}));
+  a.download='ShadowsLeftBehind-demo.'+(mime.includes('mp4')?'mp4':'webm');document.body.append(a);a.click();a.remove();
+};
+</script>
+</body>
+</html>

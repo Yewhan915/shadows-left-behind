@@ -1,0 +1,6 @@
+{
+  "version": "1.3",
+  "name": "余影 · Shadows Left Behind",
+  "release": "视觉打磨版（1.2 逻辑不变）",
+  "validation": "test-v11 全部通过；浏览器中检查四幕画面无报错。实际相机、相机权限和下载请在演示设备上确认。1.2 备份在 versions/1.2-before-polish。"
+}
